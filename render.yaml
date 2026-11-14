@@ -9,4 +9,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: GAS_WEBHOOK_URL
-        sync: false
+        value: https://script.google.com/macros/s/AKfycbzhxQA5FIRRbzsmjIcWH56qNEEOFHYAUwi5MqGG7yEZFm7z35uVAu4KCiYRuzeBWO9OrQ/exec

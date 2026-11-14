@@ -270,6 +270,7 @@ export const THAI_PROVINCES = [
 export const DEFAULT_GOOGLE_CONFIG = {
   spreadsheetId: '12Pt5GGF-Fc2lbeIIvFgtXDNNIZPUn1ypSsAKm4pEpqs',
   driveFolderId: '1hR3GUnEhZa8PtxqofJkyDuIZb9FhylvC',
+  gasWebhookUrl: 'https://script.google.com/macros/s/AKfycbzhxQA5FIRRbzsmjIcWH56qNEEOFHYAUwi5MqGG7yEZFm7z35uVAu4KCiYRuzeBWO9OrQ/exec',
   taskFilesFolderId: '',
   warrantFilesFolderId: ''
 };

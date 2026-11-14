@@ -6,6 +6,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SETTINGS_FILE = path.join(__dirname, 'database', 'settings.json');
 
+const DEFAULT_GAS_WEBHOOK_URL =
+  'https://script.google.com/macros/s/AKfycbzhxQA5FIRRbzsmjIcWH56qNEEOFHYAUwi5MqGG7yEZFm7z35uVAu4KCiYRuzeBWO9OrQ/exec';
+
 export function getGasWebhookUrl() {
   if (process.env.GAS_WEBHOOK_URL) return process.env.GAS_WEBHOOK_URL.trim();
   try {
@@ -16,7 +19,7 @@ export function getGasWebhookUrl() {
   } catch {
     // ignore
   }
-  return '';
+  return DEFAULT_GAS_WEBHOOK_URL;
 }
 
 export function saveGasWebhookUrl(url) {
