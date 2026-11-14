@@ -1,0 +1,22 @@
+[
+  {
+    "id": "usr-masteradmin",
+    "username": "masteradmin",
+    "password": "Tcsd@2026",
+    "name": "ร.ต.อ.บุญชัย ถิรภัทรไพบูลย์",
+    "rank": "รอง สว.กก.2 บก.ปอท.",
+    "role": "leader",
+    "badge": "TCSD2-MASTER",
+    "avatar": "👮‍♂️"
+  },
+  {
+    "id": "usr-admin",
+    "username": "admin",
+    "password": "team@2026",
+    "name": "ทีมงาน",
+    "rank": "เจ้าหน้าที่สืบสวน กก.2 บก.ปอท.",
+    "role": "investigator",
+    "badge": "TCSD2-TEAM",
+    "avatar": "🕵️‍♂️"
+  }
+]

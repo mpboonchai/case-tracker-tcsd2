@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: case-tracker-tcsd2
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GAS_WEBHOOK_URL
+        sync: false

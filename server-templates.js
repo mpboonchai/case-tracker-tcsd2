@@ -1,0 +1,468 @@
+import fs from 'fs';
+import path from 'path';
+import PizZip from 'pizzip';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const TEMPLATE_DIR = path.join(__dirname, 'template file', 'defult template');
+
+const TEMPLATE_FILES = {
+  arrest_record: 'บันทึกการจับกุม_Template.docx',
+  sec22: 'ม.22 วรรคสอง_Template.docx',
+  sec23: 'ม.23_Template.docx',
+  ppt: 'รายงานการจับกุม_Template.pptx',
+};
+
+const THAI_MONTHS_FULL = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+const THAI_MONTHS_SHORT = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+];
+
+function formatThaiDate(dateStr, short = false) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const day = d.getDate();
+  const month = short ? THAI_MONTHS_SHORT[d.getMonth()] : THAI_MONTHS_FULL[d.getMonth()];
+  const year = d.getFullYear() + 543;
+  return `${day} ${month} ${year}`;
+}
+
+function escapeXml(val) {
+  return String(val ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function buildAddress(w, includeSubdistrictPrefix = true) {
+  const parts = [];
+  if (w.houseNo) parts.push(w.houseNo);
+  if (w.moo) parts.push(`หมู่ ${w.moo}`);
+  if (w.road) parts.push(`ถ.${w.road}`);
+  if (w.subdistrict) parts.push(includeSubdistrictPrefix ? `ต./แขวง ${w.subdistrict}` : w.subdistrict);
+  if (w.district) parts.push(includeSubdistrictPrefix ? `อ./เขต ${w.district}` : w.district);
+  if (w.province) parts.push(`จ.${w.province}`);
+  return parts.join(' ').trim();
+}
+
+function buildLocationWithArea(loc, sub, dist, prov) {
+  const parts = [loc];
+  if (sub) parts.push(`ต./แขวง ${sub}`);
+  if (dist) parts.push(`อ./เขต ${dist}`);
+  if (prov) parts.push(`จ.${prov}`);
+  return parts.filter(Boolean).join(' ').trim();
+}
+
+/**
+ * Build placeholder key-value map matching all {{...}} tokens in the 4 Office templates.
+ */
+export function buildPlaceholderMap(warrant, personnel = []) {
+  const findPerson = (id) => personnel.find((p) => p.id === id) || null;
+  const prefix = warrant.prefix || '';
+  const firstName = warrant.firstName || '';
+  const lastName = warrant.lastName || '';
+  const fullName = `${prefix}${firstName} ${lastName}`.trim();
+  const shortName = `${prefix}${firstName}ฯ`.trim();
+
+  const notifier = findPerson(warrant.notifierId) || {};
+  const recorder = findPerson(warrant.recorderId) || {};
+
+  const arrestLocFull = buildLocationWithArea(
+    warrant.arrestLocation,
+    warrant.arrestSubdistrict,
+    warrant.arrestDistrict,
+    warrant.arrestProvince
+  );
+  const recordLocFull = buildLocationWithArea(
+    warrant.recordLocation,
+    warrant.recordSubdistrict,
+    warrant.recordDistrict,
+    warrant.recordProvince
+  );
+
+  const relativeFull = `${warrant.relativePrefix || ''}${warrant.relativeFirstName || ''} ${warrant.relativeLastName || ''}`.trim();
+
+  const map = {
+    'เพศ': warrant.gender || '',
+    'คำนำหน้าชื่อผู้ต้องหา': prefix,
+    'ชื่อผู้ต้องหา': firstName,
+    'นามสกุลผู้ต้องหา': lastName,
+    'ชื่อเต็มผู้ต้องหา': fullName,
+    'ชื่อย่อผู้ต้องหา': shortName,
+    'อายุ': warrant.age ? String(warrant.age) : '',
+    'เลขประจำตัวประชาชน': warrant.nationalId || '',
+    'ที่อยู่ผู้ต้องหา': buildAddress(warrant),
+
+    'ศาล': warrant.court || '',
+    'เลขหมายจับ': warrant.warrantNumber || '',
+    'วันที่ออกหมายจับ': formatThaiDate(warrant.issueDate, true),
+    'วันที่ออกหมายจับแบบเต็ม': formatThaiDate(warrant.issueDate, false),
+    'ข้อหา': warrant.charge || '',
+
+    'วันที่จับกุม': formatThaiDate(warrant.arrestDate, false),
+    'วันที่จับกุมแบบย่อ': formatThaiDate(warrant.arrestDate, true),
+    'เวลาที่จับกุม': warrant.arrestTime || '',
+    'สถานที่จับกุม': arrestLocFull,
+
+    'วันที่บันทึก': formatThaiDate(warrant.recordDate || warrant.arrestDate, false),
+    'เวลาที่บันทึก': warrant.recordTime || '',
+    'สถานที่ทำการบันทึก': recordLocFull,
+    'เหตุสุดวิสัย': warrant.forceMajeure || 'ไม่มี',
+
+    'ชื่อเต็มญาติ': relativeFull,
+    'เบอร์โทรศัพท์': warrant.relativePhone || '',
+    'ความเกี่ยวข้อง': warrant.relativeRelation || '',
+
+    'ผู้ที่นำตัวไปส่ง': warrant.handoverOfficer || '',
+    'สถานที่นำไปส่ง': warrant.handoverLocation || '',
+    'ที่อยู่สถานที่นำตัวไปส่ง': warrant.handoverAddress || '',
+
+    'ยศผู้แจ้ง': notifier.prefix || '',
+    'ชื่อผู้แจ้ง': notifier.firstName || '',
+    'นามสกุลผู้แจ้ง': notifier.lastName || '',
+    'ตำแหน่งผู้แจ้ง': notifier.positionDetail || notifier.position || '',
+    'เบอร์โทรศัพท์ผู้แจ้ง': notifier.phone || '',
+
+    'ยศผู้บันทึก': recorder.prefix || '',
+    'ชื่อผู้บันทึก': recorder.firstName || '',
+    'นามสกุลผู้บันทึก': recorder.lastName || '',
+    'ตำแหน่งผู้บันทึก': recorder.positionDetail || recorder.position || '',
+    'เบอร์โทรศัพท์ผู้บันทึก': recorder.phone || '',
+
+    // Image placeholders: replaced with markers first, then swapped for <w:drawing> / <p:pic>
+    'ภาพถ่ายขณะจับกุม': warrant.photoArrest ? '__IMG_SLOT_photoArrest__' : '',
+    'ภาพด้านหน้า': warrant.photoFront ? '__IMG_SLOT_photoFront__' : '',
+    'ภาพด้านหลัง': warrant.photoBack ? '__IMG_SLOT_photoBack__' : '',
+    'ภาพด้านซ้าย': warrant.photoLeft ? '__IMG_SLOT_photoLeft__' : '',
+    'ภาพด้านขวา': warrant.photoRight ? '__IMG_SLOT_photoRight__' : '',
+    'ภาพรายงาน_1': warrant.photoReport1 ? '__IMG_SLOT_photoReport1__' : '',
+    'ภาพรายงาน_2': warrant.photoReport2 ? '__IMG_SLOT_photoReport2__' : '',
+    'ภาพรายงาน_3': warrant.photoReport3 ? '__IMG_SLOT_photoReport3__' : '',
+  };
+
+  // Arresting officers 1..10
+  const officerIds = Array.isArray(warrant.arrestingOfficers) ? warrant.arrestingOfficers : [];
+  for (let i = 1; i <= 10; i++) {
+    const p = findPerson(officerIds[i - 1]) || {};
+    map[`ยศคนที่ ${i}`] = p.prefix || '';
+    map[`ชื่อคนที่ ${i}`] = p.firstName || '';
+    map[`นามสกุลคนที่ ${i}`] = p.lastName || '';
+    map[`ตำแหน่งคนที่ ${i}`] = p.positionDetail || p.position || '';
+  }
+
+  return map;
+}
+
+/**
+ * Coalesce split {{...}} placeholders across <w:t> / <a:t> runs inside a single paragraph,
+ * then replace all {{key}} tokens safely.
+ */
+function replacePlaceholdersInXml(xml, map, tagChar) {
+  const pRegex = new RegExp(`<${tagChar}:p\\b[\\s\\S]*?<\\/${tagChar}:p>`, 'g');
+  const tRegex = new RegExp(`(<${tagChar}:t(?:\\s[^>]*)?>)([\\s\\S]*?)(<\\/${tagChar}:t>)`, 'g');
+
+  return xml.replace(pRegex, (paragraphXml) => {
+    const matches = [...paragraphXml.matchAll(tRegex)];
+    if (matches.length === 0) return paragraphXml;
+
+    const combined = matches.map((m) => m[2]).join('');
+    if (!combined.includes('{{')) return paragraphXml;
+
+    // Coalesce split tokens by accumulating text across <t> nodes
+    const texts = matches.map((m) => m[2]);
+    for (let i = 0; i < texts.length; i++) {
+      let openIdx = texts[i].lastIndexOf('{{');
+      let closeIdx = openIdx !== -1 ? texts[i].indexOf('}}', openIdx) : -1;
+      // Also handle single '{' split across boundary
+      if (openIdx === -1 && texts[i].endsWith('{') && i + 1 < texts.length && texts[i + 1].startsWith('{')) {
+        texts[i] += texts[i + 1][0];
+        texts[i + 1] = texts[i + 1].slice(1);
+        openIdx = texts[i].lastIndexOf('{{');
+        closeIdx = -1;
+      }
+      if (openIdx !== -1 && closeIdx === -1) {
+        let j = i + 1;
+        while (j < texts.length) {
+          const endPos = texts[j].indexOf('}}');
+          if (endPos !== -1) {
+            texts[i] += texts[j].slice(0, endPos + 2);
+            texts[j] = texts[j].slice(endPos + 2);
+            break;
+          } else {
+            texts[i] += texts[j];
+            texts[j] = '';
+            j++;
+          }
+        }
+      }
+    }
+
+    // Replace {{key}} in each text node
+    const replacedTexts = texts.map((txt) =>
+      txt.replace(/\{\{([^}]*)\}\}/g, (_, rawKey) => {
+        const key = rawKey.trim();
+        return key in map ? escapeXml(map[key]) : '';
+      })
+    );
+
+    // Rebuild paragraph XML
+    let idx = 0;
+    return paragraphXml.replace(tRegex, (_, openTag, _oldText, closeTag) => {
+      const nextText = replacedTexts[idx++];
+      return `${openTag}${nextText}${closeTag}`;
+    });
+  });
+}
+
+const IMAGE_SLOTS = [
+  { field: 'photoArrest', label: 'ภาพถ่ายขณะจับกุม', cx: 4860000, cy: 3420000 },
+  { field: 'photoFront', label: 'ภาพผู้ต้องหา ด้านหน้า', cx: 2160000, cy: 2700000 },
+  { field: 'photoLeft', label: 'ภาพผู้ต้องหา ด้านซ้าย', cx: 2160000, cy: 2700000 },
+  { field: 'photoRight', label: 'ภาพผู้ต้องหา ด้านขวา', cx: 2160000, cy: 2700000 },
+  { field: 'photoBack', label: 'ภาพผู้ต้องหา ด้านหลัง', cx: 2160000, cy: 2700000 },
+];
+
+async function resolveImageData(val) {
+  if (typeof val !== 'string' || !val.trim()) return null;
+  const m = val.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/i);
+  if (m) {
+    const ext = m[1].toLowerCase() === 'jpeg' ? 'jpg' : m[1].toLowerCase();
+    return { ext, buffer: Buffer.from(m[2], 'base64') };
+  }
+  if (/^https?:\/\//i.test(val)) {
+    let fetchUrl = val.trim();
+    const driveMatch = fetchUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
+    if (driveMatch) {
+      fetchUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+    }
+    try {
+      const res = await fetch(fetchUrl, { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) return null;
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      if (!ct.includes('image')) return null;
+      const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg';
+      const arr = await res.arrayBuffer();
+      return { ext, buffer: Buffer.from(arr) };
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function buildDrawingXml(rId, docPrId, name, cx, cy) {
+  return `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${docPrId}" name="${escapeXml(name)}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${docPrId}" name="${escapeXml(name)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
+}
+
+const PPT_IMAGE_SLOTS = [
+  { field: 'photoReport1', label: 'ภาพรายงาน 1' },
+  { field: 'photoReport2', label: 'ภาพรายงาน 2' },
+  { field: 'photoReport3', label: 'ภาพรายงาน 3' },
+];
+
+function ensureContentTypeExtensions(zip, addedExts) {
+  let typesXml = zip.file('[Content_Types].xml')?.asText() || '';
+  if (!typesXml || addedExts.size === 0) return;
+  const mimeMap = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+  for (const ext of addedExts) {
+    if (!typesXml.includes(`Extension="${ext}"`)) {
+      typesXml = typesXml.replace(
+        '</Types>',
+        `<Default Extension="${ext}" ContentType="${mimeMap[ext] || 'image/jpeg'}"/></Types>`
+      );
+    }
+  }
+  zip.file('[Content_Types].xml', typesXml);
+}
+
+async function injectDocxImages(zip, warrant, docType) {
+  const docEntry = zip.file('word/document.xml');
+  const relsEntry = zip.file('word/_rels/document.xml.rels');
+  if (!docEntry || !relsEntry) return;
+
+  let docXml = docEntry.asText();
+  let relsXml = relsEntry.asText();
+
+  const addedExts = new Set();
+  const unplacedSlots = [];
+  let docPrId = 900;
+
+  for (const slot of IMAGE_SLOTS) {
+    const parsed = await resolveImageData(warrant[slot.field]);
+    if (!parsed) continue;
+
+    const rId = `rIdUpload_${slot.field}`;
+    const mediaPath = `word/media/upload_${slot.field}.${parsed.ext}`;
+    zip.file(mediaPath, parsed.buffer);
+    addedExts.add(parsed.ext);
+
+    if (!relsXml.includes(`Id="${rId}"`)) {
+      relsXml = relsXml.replace(
+        '</Relationships>',
+        `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/upload_${slot.field}.${parsed.ext}"/></Relationships>`
+      );
+    }
+
+    const marker = `__IMG_SLOT_${slot.field}__`;
+    const drawingXml = buildDrawingXml(rId, ++docPrId, slot.label, slot.cx, slot.cy);
+    if (docXml.includes(marker)) {
+      const exactTagRegex = new RegExp(`<w:t(?:\\s[^>]*)?>${marker}<\\/w:t>`, 'g');
+      docXml = docXml.replace(exactTagRegex, drawingXml);
+      // Fallback if marker was inside a larger <w:t> text node
+      if (docXml.includes(marker)) {
+        docXml = docXml.replaceAll(marker, `</w:t></w:r><w:r>${drawingXml}</w:r><w:r><w:t>`);
+      }
+    } else {
+      unplacedSlots.push({ ...slot, drawingXml });
+    }
+  }
+
+  // Append any uploaded photos that weren't already placed inline (e.g. 4-sided photos in บันทึกการจับกุม & all photos in ม.23)
+  if ((docType === 'sec23' || docType === 'arrest_record') && unplacedSlots.length > 0) {
+    const title =
+      docType === 'sec23'
+        ? 'ภาพถ่ายประกอบบันทึกการควบคุมตัว (ม.23)'
+        : 'ภาพถ่ายผู้ต้องหาประกอบบันทึกการจับกุม';
+    const appendixParagraphs = [
+      `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`,
+      `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>${title}</w:t></w:r></w:p>`,
+      ...unplacedSlots.map(
+        (s) =>
+          `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>${escapeXml(s.label)}</w:t></w:r></w:p>` +
+          `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r>${s.drawingXml}</w:r></w:p>`
+      ),
+    ].join('');
+
+    if (docXml.includes('<w:sectPr')) {
+      const lastSectIdx = docXml.lastIndexOf('<w:sectPr');
+      docXml = docXml.slice(0, lastSectIdx) + appendixParagraphs + docXml.slice(lastSectIdx);
+    } else {
+      docXml = docXml.replace('</w:body>', `${appendixParagraphs}</w:body>`);
+    }
+  }
+
+  zip.file('word/document.xml', docXml);
+  zip.file('word/_rels/document.xml.rels', relsXml);
+  ensureContentTypeExtensions(zip, addedExts);
+}
+
+async function injectPptxImages(zip, warrant) {
+  const addedExts = new Set();
+  const parsedImages = {};
+  for (const slot of PPT_IMAGE_SLOTS) {
+    const parsed = await resolveImageData(warrant[slot.field]);
+    if (parsed) {
+      parsedImages[slot.field] = parsed;
+      zip.file(`ppt/media/upload_${slot.field}.${parsed.ext}`, parsed.buffer);
+      addedExts.add(parsed.ext);
+    }
+  }
+
+  if (Object.keys(parsedImages).length === 0) return;
+
+  let picIdCounter = 950;
+  Object.keys(zip.files).forEach((entryName) => {
+    const slideMatch = entryName.match(/^ppt\/slides\/(slide\d+\.xml)$/);
+    if (!slideMatch) return;
+
+    let slideXml = zip.files[entryName].asText();
+    const relsPath = `ppt/slides/_rels/${slideMatch[1]}.rels`;
+    let relsXml = zip.file(relsPath)?.asText() || '';
+    let modified = false;
+
+    for (const slot of PPT_IMAGE_SLOTS) {
+      const parsed = parsedImages[slot.field];
+      if (!parsed) continue;
+      const marker = `__IMG_SLOT_${slot.field}__`;
+      if (!slideXml.includes(marker)) continue;
+
+      const rId = `rIdUpload_${slot.field}`;
+      if (relsXml && !relsXml.includes(`Id="${rId}"`)) {
+        relsXml = relsXml.replace(
+          '</Relationships>',
+          `<Relationship Id="${rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/upload_${slot.field}.${parsed.ext}"/></Relationships>`
+        );
+      }
+
+      slideXml = slideXml.replace(/<p:sp\b[\s\S]*?<\/p:sp>/g, (spXml) => {
+        if (!spXml.includes(marker)) return spXml;
+        modified = true;
+        const spPrMatch = spXml.match(/<p:spPr>[\s\S]*?<\/p:spPr>/);
+        const spPrXml = spPrMatch
+          ? spPrMatch[0]
+          : '<p:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="3000000" cy="2000000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>';
+        const picId = ++picIdCounter;
+        return `<p:pic><p:nvPicPr><p:cNvPr id="${picId}" name="${escapeXml(slot.label)}"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>${spPrXml}</p:pic>`;
+      });
+    }
+
+    if (modified) {
+      zip.file(entryName, slideXml);
+      if (relsXml) zip.file(relsPath, relsXml);
+    }
+  });
+
+  ensureContentTypeExtensions(zip, addedExts);
+}
+
+/**
+ * Generate a filled .docx or .pptx Buffer from the default template.
+ */
+export async function generateDocumentBuffer(type, warrant, personnel = []) {
+  const fileName = TEMPLATE_FILES[type];
+  if (!fileName) {
+    throw new Error(`Unknown template type: ${type}`);
+  }
+
+  const filePath = path.join(TEMPLATE_DIR, fileName);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Template file not found: ${filePath}`);
+  }
+
+  const content = fs.readFileSync(filePath);
+  const zip = new PizZip(content);
+  const map = buildPlaceholderMap(warrant, personnel);
+  const isPpt = type === 'ppt';
+  const tagChar = isPpt ? 'a' : 'w';
+
+  const xmlPattern = isPpt
+    ? /^ppt\/slides\/slide\d+\.xml$/
+    : /^word\/(document|header\d+|footer\d+)\.xml$/;
+
+  Object.keys(zip.files).forEach((entryName) => {
+    if (xmlPattern.test(entryName)) {
+      const xml = zip.files[entryName].asText();
+      const updated = replacePlaceholdersInXml(xml, map, tagChar);
+      zip.file(entryName, updated);
+    }
+  });
+
+  if (!isPpt) {
+    await injectDocxImages(zip, warrant, type);
+  } else {
+    await injectPptxImages(zip, warrant);
+  }
+
+  const buffer = zip.generate({
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
+  });
+
+  return {
+    buffer,
+    fileName,
+    mimeType: isPpt
+      ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+}
