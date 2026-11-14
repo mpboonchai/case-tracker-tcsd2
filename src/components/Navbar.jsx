@@ -121,6 +121,18 @@ export default function Navbar({
             </button>
 
             <button
+              onClick={() => setActiveView('operations')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === 'operations'
+                  ? 'bg-indigo-600 text-white font-bold shadow-sm'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>เคสคดี & สถิติ</span>
+            </button>
+
+            <button
               onClick={() => setActiveView('personnel')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeView === 'personnel'
@@ -257,6 +269,18 @@ export default function Navbar({
             <UserCheck className="w-3 h-3" />
             <span>กำลังพล</span>
           </button>
+          <button
+            onClick={() => setActiveView('operations')}
+            className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded-lg text-[11px] font-semibold transition whitespace-nowrap ${
+              activeView === 'operations'
+                ? 'bg-indigo-600 text-white font-bold'
+                : 'bg-slate-800/60 text-slate-300'
+            }`}
+          >
+            <Briefcase className="w-3 h-3" />
+            <span>เคสคดี</span>
+          </button>
+
           <button
             onClick={() => setActiveView('arrests')}
             className={`flex-1 flex items-center justify-center gap-1 py-1 px-2 rounded-lg text-[11px] font-semibold transition whitespace-nowrap ${

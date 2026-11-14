@@ -1,0 +1,74 @@
+[
+  {
+    "id": "op-hybrid-001",
+    "caseName": "Hybrid",
+    "caseCode": "TCSD2-69-001",
+    "status": "ขยายผลเพิ่ม",
+    "details": "สืบสวนจับกุมเครือข่ายหลอกลวงออนไลน์และบัญชีม้าในขบวนการ Hybrid Scam",
+    "additionalNotes": "จับกุมผู้ต้องหาตามหมายจับแล้ว 22 ราย อยู่ระหว่างขยายผลเส้นทางการเงินและผู้สั่งการเพิ่มเติม",
+    "leadOfficerId": "per-1560300297622",
+    "startDate": "2026-02-15",
+    "driveFolderUrl": "",
+    "relatedLinks": ""
+  },
+  {
+    "id": "op-sheet-002",
+    "caseName": "Black Market Page หลอกประมูลขายนาฬิกา",
+    "caseCode": "TCSD2-69-002",
+    "status": "กำลังสืบสวน",
+    "details": "Black Market Page หลอกประมูลขายนาฬิกา FB Page: ประมูลเพชรนาฬิกา บีแอนด์เจ ไดมอน",
+    "additionalNotes": "ตรวจสอบข้อมูลเพจและเส้นทางการโอนเงิน",
+    "leadOfficerId": "per-1560300297622",
+    "startDate": "2026-01-26",
+    "driveFolderUrl": "",
+    "relatedLinks": ""
+  },
+  {
+    "id": "op-sheet-003",
+    "caseName": "หลอกลวงซื้อขายสินค้าออนไลน์ Style Circle",
+    "caseCode": "TCSD2-69-003",
+    "status": "กำลังสืบสวน",
+    "details": "หลอกลวงซื้อขายสินค้าออนไลน์+ลงทุนขายสินค้า Style Circle",
+    "additionalNotes": "",
+    "leadOfficerId": "per-1560300297622",
+    "startDate": "2026-01-30",
+    "driveFolderUrl": "",
+    "relatedLinks": ""
+  },
+  {
+    "id": "op-sheet-004",
+    "caseName": "เคสคุณระวี Call Center AISxสภ.เมืองเลย",
+    "caseCode": "TCSD2-69-004",
+    "status": "กำลังสืบสวน",
+    "details": "เคสคุณระวี Call Center AISxสภ.เมืองเลย",
+    "additionalNotes": "",
+    "leadOfficerId": "per-1560300297622",
+    "startDate": "2026-03-03",
+    "driveFolderUrl": "",
+    "relatedLinks": ""
+  },
+  {
+    "id": "op-sheet-005",
+    "caseName": "พนันออนไลน์ เว็บไซต์ 1g17.com",
+    "caseCode": "TCSD2-69-005",
+    "status": "กำลังสืบสวน",
+    "details": "สืบสวนเครือข่ายเว็บพนันออนไลน์ 1g17.com",
+    "additionalNotes": "",
+    "leadOfficerId": "per-1560300297622",
+    "startDate": "2026-03-03",
+    "driveFolderUrl": "",
+    "relatedLinks": ""
+  },
+  {
+    "id": "op-sheet-006",
+    "caseName": "เคสคุณหมอ หลอกลวงเป็นไปรษณีย์",
+    "caseCode": "TCSD2-69-006",
+    "status": "กำลังสืบสวน",
+    "details": "เคสคุณหมอ หลอกลวงเป็นไปรษณีย์ บุคคลอื่น ให้โอนเงินคุ้มครองสิทธิ โครงการคุ้มครองเงินที่ถูกหลอกลวงจากมิจฉาชีพ",
+    "additionalNotes": "",
+    "leadOfficerId": "per-1560300297622",
+    "startDate": "2026-05-07",
+    "driveFolderUrl": "",
+    "relatedLinks": ""
+  }
+]

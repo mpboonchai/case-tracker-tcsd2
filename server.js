@@ -30,6 +30,7 @@ const CASES_FILE = path.join(DB_DIR, 'cases.json');
 const USERS_FILE = path.join(DB_DIR, 'users.json');
 const PERSONNEL_FILE = path.join(DB_DIR, 'personnel.json');
 const WARRANTS_FILE = path.join(DB_DIR, 'warrants.json');
+const OPERATIONS_FILE = path.join(DB_DIR, 'operations.json');
 
 // Helper to read/write JSON files safely
 const readJson = (file, defaultData = []) => {
@@ -165,6 +166,7 @@ const registerCollectionRoutes = (routeName, filePath, idPrefix) => {
 
 registerCollectionRoutes('personnel', PERSONNEL_FILE, 'per');
 registerCollectionRoutes('warrants', WARRANTS_FILE, 'war');
+registerCollectionRoutes('operations', OPERATIONS_FILE, 'op');
 
 // GAS Web App Webhook Config
 app.get('/api/config/gas', (_req, res) => {

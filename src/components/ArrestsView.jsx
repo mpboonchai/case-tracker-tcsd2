@@ -35,6 +35,8 @@ const THAI_MONTHS_SHORT = [
 export default function ArrestsView({
   warrants = [],
   cases = [],
+  operations = [],
+  initialCaseFilter = 'all',
   users = [],
   personnel = [],
   onSaveWarrant,
@@ -44,7 +46,13 @@ export default function ArrestsView({
   const [searchQuery, setSearchQuery] = useState('');
   const [monthFilter, setMonthFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
-  const [caseFilter, setCaseFilter] = useState('all');
+  const [caseFilter, setCaseFilter] = useState(initialCaseFilter || 'all');
+
+  React.useEffect(() => {
+    if (initialCaseFilter) {
+      setCaseFilter(initialCaseFilter);
+    }
+  }, [initialCaseFilter]);
   const [isWarrantModalOpen, setIsWarrantModalOpen] = useState(false);
   const [editingWarrant, setEditingWarrant] = useState(null);
   const [arrestingWarrant, setArrestingWarrant] = useState(null);
@@ -74,6 +82,12 @@ export default function ArrestsView({
 
   const caseSummaryList = useMemo(() => {
     const map = new Map();
+    operations.forEach(op => {
+      const name = (op.caseName || '').trim();
+      if (name && !map.has(name)) {
+        map.set(name, { caseName: name, total: 0, arrested: 0, investigating: 0 });
+      }
+    });
     warrants.forEach(w => {
       const name = getCaseDisplayName(w) || 'ไม่ระบุชื่อเคส';
       if (!map.has(name)) {
@@ -947,6 +961,8 @@ export default function ArrestsView({
         }}
         editingWarrant={editingWarrant}
         cases={cases}
+        operations={operations}
+        warrants={warrants}
         users={users}
       />
 

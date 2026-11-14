@@ -45,6 +45,8 @@ export default function WarrantModal({
   onSave,
   editingWarrant = null,
   cases = [],
+  operations = [],
+  warrants = [],
   users = []
 }) {
   const [step, setStep] = useState(1);
@@ -274,8 +276,14 @@ export default function WarrantModal({
                   className={inputClass}
                 />
                 <datalist id="warrant-case-names">
-                  {cases.map(c => (
-                    <option key={c.id} value={c.title} />
+                  {Array.from(
+                    new Set([
+                      ...operations.map(o => (o.caseName || '').trim()).filter(Boolean),
+                      ...warrants.map(w => (w.caseName || '').trim()).filter(Boolean),
+                      ...cases.map(c => (c.title || '').trim()).filter(Boolean)
+                    ])
+                  ).map(name => (
+                    <option key={name} value={name} />
                   ))}
                 </datalist>
               </div>

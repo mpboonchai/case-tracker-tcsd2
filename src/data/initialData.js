@@ -253,6 +253,28 @@ export const WARRANT_STATUS_OPTIONS = [
   'ถอนหมายจับ'
 ];
 
+export const CASE_OPERATION_STATUSES = [
+  'กำลังสืบสวน',
+  'จับกุมแล้ว',
+  'ขยายผลเพิ่ม',
+  'เสร็จสิ้น'
+];
+
+export const INITIAL_OPERATIONS = [
+  {
+    id: 'op-hybrid-001',
+    caseName: 'Hybrid',
+    caseCode: 'TCSD2-69-001',
+    status: 'ขยายผลเพิ่ม',
+    details: 'สืบสวนจับกุมเครือข่ายหลอกลวงออนไลน์และบัญชีม้าในขบวนการ Hybrid Scam',
+    additionalNotes: 'อยู่ระหว่างขยายผลเส้นทางการเงินและผู้สั่งการเพิ่มเติม',
+    leadOfficerId: 'per-1560300297622',
+    startDate: '2026-02-15',
+    driveFolderUrl: '',
+    relatedLinks: ''
+  }
+];
+
 export const THAI_PROVINCES = [
   'กรุงเทพมหานคร', 'กระบี่', 'กาญจนบุรี', 'กาฬสินธุ์', 'กำแพงเพชร', 'ขอนแก่น',
   'จันทบุรี', 'ฉะเชิงเทรา', 'ชลบุรี', 'ชัยนาท', 'ชัยภูมิ', 'ชุมพร', 'เชียงราย',

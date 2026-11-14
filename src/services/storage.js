@@ -4,6 +4,7 @@ import {
   INITIAL_USERS,
   INITIAL_PERSONNEL,
   INITIAL_WARRANTS,
+  INITIAL_OPERATIONS,
   DEFAULT_GOOGLE_CONFIG
 } from '../data/initialData';
 
@@ -12,6 +13,7 @@ const STORAGE_KEYS = {
   USERS: 'tcsd_users_v2',
   PERSONNEL: 'tcsd_personnel_v1',
   WARRANTS: 'tcsd_warrants_v1',
+  OPERATIONS: 'tcsd_operations_v1',
   CURRENT_USER: 'tcsd_current_user_v2',
   SETTINGS: 'tcsd_settings_v2',
 };
@@ -322,6 +324,9 @@ export const savePersonnel = (list) => saveCollection(STORAGE_KEYS.PERSONNEL, 'p
 
 export const getWarrants = () => getCollection(STORAGE_KEYS.WARRANTS, 'warrants', INITIAL_WARRANTS);
 export const saveWarrants = (list) => saveCollection(STORAGE_KEYS.WARRANTS, 'warrants', list);
+
+export const getOperations = () => getCollection(STORAGE_KEYS.OPERATIONS, 'operations', INITIAL_OPERATIONS);
+export const saveOperations = (list) => saveCollection(STORAGE_KEYS.OPERATIONS, 'operations', list);
 
 export const calculateAge = (dobStr) => {
   if (!dobStr) return '';

@@ -4,6 +4,7 @@ import LeaderView from './components/LeaderView';
 import MemberView from './components/MemberView';
 import PersonnelView from './components/PersonnelView';
 import ArrestsView from './components/ArrestsView';
+import CaseOperationsView from './components/CaseOperationsView';
 import CaseModal from './components/CaseModal';
 import LoginModal from './components/LoginModal';
 import CloudSettingsModal from './components/CloudSettingsModal';
@@ -18,7 +19,9 @@ import {
   getPersonnel,
   savePersonnel,
   getWarrants,
-  saveWarrants
+  saveWarrants,
+  getOperations,
+  saveOperations
 } from './services/storage';
 
 export default function App() {
@@ -27,9 +30,11 @@ export default function App() {
   const [cases, setCases] = useState([]);
   const [personnel, setPersonnel] = useState([]);
   const [warrants, setWarrants] = useState([]);
+  const [operations, setOperations] = useState([]);
+  const [selectedArrestCaseFilter, setSelectedArrestCaseFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   
-  // Views: 'leader' or 'member'
+  // Views: 'leader', 'member', 'operations', 'personnel', 'arrests'
   const [activeView, setActiveView] = useState(
     currentUser?.role === 'leader' ? 'leader' : 'member'
   );
@@ -41,19 +46,21 @@ export default function App() {
   const [isCloudSettingsOpen, setIsCloudSettingsOpen] = useState(false);
   const [isCloudConnected, setIsCloudConnected] = useState(false);
 
-  // Load cases, personnel, warrants on mount
+  // Load cases, personnel, warrants, operations on mount
   useEffect(() => {
     const initData = async () => {
       setIsLoading(true);
       try {
-        const [loadedCases, loadedPersonnel, loadedWarrants] = await Promise.all([
+        const [loadedCases, loadedPersonnel, loadedWarrants, loadedOperations] = await Promise.all([
           getCases(),
           getPersonnel(),
-          getWarrants()
+          getWarrants(),
+          getOperations()
         ]);
         setCases(loadedCases);
         setPersonnel(loadedPersonnel);
         setWarrants(loadedWarrants);
+        setOperations(loadedOperations);
       } catch (err) {
         console.error('Error fetching data:', err);
       } finally {
@@ -247,6 +254,40 @@ export default function App() {
     setWarrants(fresh);
   };
 
+  // Case Operations handlers
+  const handleSaveOperation = async (opData) => {
+    const id = opData.id || `op-${Date.now()}`;
+    const record = { ...opData, id };
+    const exists = operations.some(
+      (o) =>
+        o.id === id ||
+        (o.caseName || '').trim().toLowerCase() ===
+          (record.caseName || '').trim().toLowerCase()
+    );
+    const updated = exists
+      ? operations.map((o) =>
+          o.id === id ||
+          (o.caseName || '').trim().toLowerCase() ===
+            (record.caseName || '').trim().toLowerCase()
+            ? { ...o, ...record, id: o.id || id }
+            : o
+        )
+      : [record, ...operations];
+    setOperations(updated);
+    await saveOperations(updated);
+  };
+
+  const handleDeleteOperation = async (opId) => {
+    const updated = operations.filter((o) => o.id !== opId);
+    setOperations(updated);
+    await saveOperations(updated);
+  };
+
+  const handleJumpToArrestsCase = (caseName) => {
+    setSelectedArrestCaseFilter(caseName || 'all');
+    setActiveView('arrests');
+  };
+
   return (
     <div className="min-h-screen bg-[#070D1E] text-slate-100 flex flex-col font-['Prompt',sans-serif]">
       
@@ -272,6 +313,15 @@ export default function App() {
               กำลังโหลดระบบสืบสวนและฐานข้อมูลสำนวนคดี TCSD...
             </p>
           </div>
+        ) : activeView === 'operations' ? (
+          <CaseOperationsView
+            operations={operations}
+            warrants={warrants}
+            personnel={personnel}
+            onSaveOperation={handleSaveOperation}
+            onDeleteOperation={handleDeleteOperation}
+            onJumpToArrestsCase={handleJumpToArrestsCase}
+          />
         ) : activeView === 'personnel' ? (
           <PersonnelView
             personnel={personnel}
@@ -284,6 +334,8 @@ export default function App() {
           <ArrestsView
             warrants={warrants}
             cases={cases}
+            operations={operations}
+            initialCaseFilter={selectedArrestCaseFilter}
             users={users}
             personnel={personnel}
             onSaveWarrant={handleSaveWarrant}
