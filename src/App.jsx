@@ -167,15 +167,17 @@ export default function App() {
     await saveCases(updatedCases);
   };
 
-  // Save case (Create or Update)
+  // Save case (Create or Update) — new cases append to the end of the list
   const handleSaveCase = async (caseData) => {
+    const id = caseData.id || `case-${Date.now()}`;
+    const record = { ...caseData, id };
     let updatedCases = [];
-    const exists = cases.some(c => c.id === caseData.id);
+    const exists = cases.some(c => c.id === id);
 
     if (exists) {
-      updatedCases = cases.map(c => (c.id === caseData.id ? caseData : c));
+      updatedCases = cases.map(c => (c.id === id ? { ...c, ...record } : c));
     } else {
-      updatedCases = [caseData, ...cases];
+      updatedCases = [...cases, record];
     }
 
     setCases(updatedCases);
@@ -231,14 +233,14 @@ export default function App() {
     await savePersonnel(updated);
   };
 
-  // Warrants & Arrests handlers
+  // Warrants & Arrests handlers — new warrants append to the end of the list
   const handleSaveWarrant = async (warrantData) => {
     const id = warrantData.id || `war-${Date.now()}`;
     const record = { ...warrantData, id };
     const exists = warrants.some(w => w.id === id);
     const updated = exists
       ? warrants.map(w => (w.id === id ? record : w))
-      : [record, ...warrants];
+      : [...warrants, record];
     setWarrants(updated);
     await saveWarrants(updated);
   };
@@ -254,7 +256,7 @@ export default function App() {
     setWarrants(fresh);
   };
 
-  // Case Operations handlers
+  // Case Operations handlers — new operations append to the end of the list
   const handleSaveOperation = async (opData) => {
     const id = opData.id || `op-${Date.now()}`;
     const record = { ...opData, id };
@@ -272,7 +274,7 @@ export default function App() {
             ? { ...o, ...record, id: o.id || id }
             : o
         )
-      : [record, ...operations];
+      : [...operations, record];
     setOperations(updated);
     await saveOperations(updated);
   };
@@ -346,8 +348,11 @@ export default function App() {
           <LeaderView
             cases={cases}
             users={users}
+            personnel={personnel}
+            operations={operations}
             currentUser={currentUser}
             onToggleCheck={handleToggleCheck}
+            onSaveCase={handleSaveCase}
             onEditCase={handleEditCase}
             onDeleteCase={handleDeleteCase}
             onOpenDetails={handleOpenDetails}
@@ -357,8 +362,11 @@ export default function App() {
           <MemberView
             cases={cases}
             users={users}
+            personnel={personnel}
+            operations={operations}
             currentUser={currentUser}
             onToggleCheck={handleToggleCheck}
+            onSaveCase={handleSaveCase}
             onEditCase={handleEditCase}
             onDeleteCase={handleDeleteCase}
             onOpenDetails={handleOpenDetails}

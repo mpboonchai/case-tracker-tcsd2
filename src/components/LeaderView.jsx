@@ -2,15 +2,18 @@ import React, { useState } from 'react';
 import DashboardOverview from './DashboardOverview';
 import CaseFilterBar from './CaseFilterBar';
 import CaseCard from './CaseCard';
-import CaseRow from './CaseRow';
+import TodoSheetTable from './TodoSheetTable';
 import { Users, FileSpreadsheet } from 'lucide-react';
 import { exportToExcel } from '../services/storage';
 
 export default function LeaderView({
   cases,
   users,
+  personnel = [],
+  operations = [],
   currentUser,
   onToggleCheck,
+  onSaveCase,
   onEditCase,
   onDeleteCase,
   onOpenDetails,
@@ -21,7 +24,7 @@ export default function LeaderView({
   const [stepFilter, setStepFilter] = useState('all');
   const [officerFilter, setOfficerFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('list');
 
   const filteredCases = cases.filter(item => {
     if (searchQuery.trim()) {
@@ -169,39 +172,18 @@ export default function LeaderView({
           ))}
         </div>
       ) : (
-        <div className="cyber-card rounded-xl overflow-hidden border border-blue-900/60 shadow-lg">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#080E1E] text-slate-400 text-[10px] sm:text-[11px] font-semibold border-b border-[#1E2E54] uppercase tracking-wider">
-                  <th className="px-2.5 py-2.5 text-center w-10">ลำดับ</th>
-                  <th className="px-3 py-2.5">ชื่องานสืบสวน / เลขหนังสือ</th>
-                  <th className="px-2.5 py-2.5">หน่วยงานที่ขอ</th>
-                  <th className="px-2.5 py-2.5">ผู้รับผิดชอบ</th>
-                  <th className="px-2 py-2.5 text-center">วันที่ทำ</th>
-                  <th className="px-2 py-2.5 text-center">กำหนดส่ง</th>
-                  <th className="px-2.5 py-2.5 text-center w-32">การติดตาม (3 ช่อง)</th>
-                  <th className="px-2 py-2.5 text-center w-20">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#1E2E54]/40 bg-[#070D1E]/40 text-xs">
-                {filteredCases.map((caseItem, idx) => (
-                  <CaseRow
-                    key={caseItem.id}
-                    index={idx}
-                    caseData={caseItem}
-                    currentUser={currentUser}
-                    users={users}
-                    onToggleCheck={onToggleCheck}
-                    onEditCase={onEditCase}
-                    onDeleteCase={onDeleteCase}
-                    onOpenDetails={onOpenDetails}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <TodoSheetTable
+          cases={filteredCases}
+          users={users}
+          personnel={personnel}
+          operations={operations}
+          currentUser={currentUser}
+          onToggleCheck={onToggleCheck}
+          onSaveCase={onSaveCase}
+          onEditCase={onEditCase}
+          onDeleteCase={onDeleteCase}
+          onOpenDetails={onOpenDetails}
+        />
       )}
 
     </div>

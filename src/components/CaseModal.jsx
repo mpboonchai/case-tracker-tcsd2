@@ -47,6 +47,8 @@ export default function CaseModal({
   const [check2, setCheck2] = useState(false);
   const [check3, setCheck3] = useState(false);
   const [notes, setNotes] = useState('');
+  const [channel, setChannel] = useState('');
+  const [result, setResult] = useState('');
   const [newLogNote, setNewLogNote] = useState('');
 
   useEffect(() => {
@@ -67,7 +69,20 @@ export default function CaseModal({
       setCheck1(!!caseData.check1_requested);
       setCheck2(!!caseData.check2_received);
       setCheck3(!!caseData.check3_verified);
-      setNotes(caseData.notes || '');
+      let cleanedNotes = caseData.notes || '';
+      if (typeof cleanedNotes === 'string' && cleanedNotes.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(cleanedNotes);
+          if (Array.isArray(parsed)) {
+            cleanedNotes = parsed.map(x => x?.text || '').filter(Boolean).join('\n');
+          }
+        } catch {
+          // ignore
+        }
+      }
+      setNotes(cleanedNotes);
+      setChannel(caseData.channel || '');
+      setResult(caseData.result || '');
     } else {
       setTitle('');
       setCategory('งานสืบสวน');
@@ -90,6 +105,8 @@ export default function CaseModal({
       setCheck2(false);
       setCheck3(false);
       setNotes('');
+      setChannel('');
+      setResult('');
     }
     setActiveTab('form');
     setNewLogNote('');
@@ -161,6 +178,8 @@ export default function CaseModal({
       check2_received: check2,
       check3_verified: check3,
       notes: notes.trim(),
+      channel: channel.trim(),
+      result: result.trim(),
       history
     };
 
@@ -501,18 +520,44 @@ export default function CaseModal({
                 ></textarea>
               </div>
 
-              {/* Notes */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  หมายเหตุ (Notes)
-                </label>
-                <input
-                  type="text"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="เช่น รอตอบกลับภายใน 18 พ.ย. หรือ นัดพบผู้แทนธนาคาร"
-                  className="w-full px-3 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-amber-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
-                />
+              {/* Notes, Channel, Result */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    หมายเหตุ (Notes)
+                  </label>
+                  <input
+                    type="text"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="เช่น ขอรายละเอียดเพิ่มเติม / 1. LAMER"
+                    className="w-full px-3 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-amber-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    ช่องทาง (Channel / Case ID)
+                  </label>
+                  <input
+                    type="text"
+                    value={channel}
+                    onChange={(e) => setChannel(e.target.value)}
+                    placeholder="เช่น ส่งไลน์พี่ต่าย / Case:25442983"
+                    className="w-full px-3 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-cyan-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    ผล (Result)
+                  </label>
+                  <input
+                    type="text"
+                    value={result}
+                    onChange={(e) => setResult(e.target.value)}
+                    placeholder="เช่น ชื่อผู้จดทะเบียน / ***ยกเลิก"
+                    className="w-full px-3 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-emerald-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
               </div>
 
               {/* Co-Assignees (ผู้ร่วมรับผิดชอบ) */}

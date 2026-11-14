@@ -79,7 +79,7 @@ app.post('/api/cases', (req, res) => {
     newCase.id = `case-${Date.now()}`;
   }
   const cases = readJson(CASES_FILE, []);
-  cases.unshift(newCase);
+  cases.push(newCase);
   writeJson(CASES_FILE, cases);
   res.status(201).json(newCase);
 });
@@ -129,7 +129,7 @@ const registerCollectionRoutes = (routeName, filePath, idPrefix) => {
     const item = req.body;
     if (!item.id) item.id = `${idPrefix}-${Date.now()}`;
     const list = readJson(filePath, []);
-    list.unshift(item);
+    list.push(item);
     writeJson(filePath, list);
     res.status(201).json(item);
   });
