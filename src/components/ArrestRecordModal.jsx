@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShieldAlert, Save, Users, Check, Camera, Upload, Trash2 } from 'lucide-react';
 import { THAI_PROVINCES } from '../data/initialData';
-import { normalizeImageUrl } from '../services/storage';
+import { normalizeImageUrl, formatTimeHHMM } from '../services/storage';
 import DateInput, { getTodayDMY, toDMY } from './DateInput';
 import FileDropzone from './FileDropzone';
 
@@ -100,13 +100,13 @@ export default function ArrestRecordModal({
     const today = getTodayDMY();
     setFormData({
       arrestDate: toDMY(warrant.arrestDate) || today,
-      arrestTime: warrant.arrestTime || '09:00',
+      arrestTime: formatTimeHHMM(warrant.arrestTime) || '09:00',
       arrestLocation: warrant.arrestLocation || '',
       arrestSubdistrict: warrant.arrestSubdistrict || '',
       arrestDistrict: warrant.arrestDistrict || '',
       arrestProvince: warrant.arrestProvince || warrant.province || 'กรุงเทพมหานคร',
       recordDate: toDMY(warrant.recordDate) || today,
-      recordTime: warrant.recordTime || '10:30',
+      recordTime: formatTimeHHMM(warrant.recordTime) || '10:30',
       recordLocation: warrant.recordLocation || 'กก.2 บก.ปอท.',
       recordSubdistrict: warrant.recordSubdistrict || 'จอมพล',
       recordDistrict: warrant.recordDistrict || 'จตุจักร',
@@ -219,14 +219,19 @@ export default function ArrestRecordModal({
                 />
               </div>
               <div>
-                <label className={labelClass}>เวลาจับกุม *</label>
+                <label className={labelClass}>เวลาจับกุม * (hh:mm)</label>
                 <input
                   type="text"
                   required
+                  maxLength={5}
                   value={formData.arrestTime}
                   onChange={(e) => updateField('arrestTime', e.target.value)}
-                  placeholder="เช่น 07:30"
-                  className={inputClass}
+                  onBlur={(e) => {
+                    const fmt = formatTimeHHMM(e.target.value);
+                    if (fmt !== e.target.value) updateField('arrestTime', fmt);
+                  }}
+                  placeholder="hh:mm (เช่น 07:30)"
+                  className={`${inputClass} font-mono`}
                 />
               </div>
               <div className="sm:col-span-2">
@@ -289,12 +294,18 @@ export default function ArrestRecordModal({
                 />
               </div>
               <div>
-                <label className={labelClass}>เวลาทำบันทึก</label>
+                <label className={labelClass}>เวลาทำบันทึก (hh:mm)</label>
                 <input
                   type="text"
+                  maxLength={5}
                   value={formData.recordTime}
                   onChange={(e) => updateField('recordTime', e.target.value)}
-                  className={inputClass}
+                  onBlur={(e) => {
+                    const fmt = formatTimeHHMM(e.target.value);
+                    if (fmt !== e.target.value) updateField('recordTime', fmt);
+                  }}
+                  placeholder="hh:mm (เช่น 10:30)"
+                  className={`${inputClass} font-mono`}
                 />
               </div>
               <div className="sm:col-span-2">

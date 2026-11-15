@@ -272,6 +272,46 @@ export const extractMonth = (dateStr) => {
 };
 
 /**
+ * Normalize time string to HH:mm (24h).
+ * Handles "9:00", "09.30", "0930", "09:00:00", ISO "1899-12-30T09:00:00",
+ * and strips corrupted Google Sheets epoch dates like "1899-12-30".
+ */
+export const formatTimeHHMM = (val) => {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (!s || s === '-') return '';
+
+  const isoTimeMatch = s.match(/T(\d{2}):(\d{2})/);
+  if (isoTimeMatch) {
+    return `${isoTimeMatch[1]}:${isoTimeMatch[2]}`;
+  }
+
+  if (/^1899-\d{2}-\d{2}$/.test(s) || /^\d{2}\/\d{2}\/1899$/.test(s)) {
+    return '';
+  }
+
+  const hmMatch = s.match(/^(\d{1,2})[:.](\d{2})(?:[:.]\d{2})?$/);
+  if (hmMatch) {
+    const hh = Number(hmMatch[1]);
+    const mm = Number(hmMatch[2]);
+    if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    }
+  }
+
+  const fourDigits = s.match(/^(\d{2})(\d{2})$/);
+  if (fourDigits) {
+    const hh = Number(fourDigits[1]);
+    const mm = Number(fourDigits[2]);
+    if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+      return `${fourDigits[1]}:${fourDigits[2]}`;
+    }
+  }
+
+  return s;
+};
+
+/**
  * Convert Google Drive uc / file / open links to reliable embeddable CDN links (lh3.googleusercontent.com)
  * This avoids Google Drive's Cross-Origin-Resource-Policy: same-site restriction on <img> tags.
  */
@@ -462,7 +502,7 @@ export const generateLineReportText = (warrant, personnel = []) => {
 
 กก.2 บก.ปอท. ขออนุญาตรายงานผลการจับกุมผู้ต้องหาตามหมายจับ (${ownerTag}) 1 ราย ดังนี้
 
-🔵 เมื่อวันที่ ${formatThaiDateFull(warrant.arrestDate)} เวลาประมาณ ${warrant.arrestTime || '-'} น.
+🔵 เมื่อวันที่ ${formatThaiDateFull(warrant.arrestDate)} เวลาประมาณ ${formatTimeHHMM(warrant.arrestTime) || '-'} น.
 
 🟡 ภายใต้การอำนวยการของ พล.ต.ท.ณัฐศักดิ์ เชาวนาศัย ผบช.ก., พล.ต.ต.อธิป พงษ์ศิวาภัย รอง ผบช.ก., พล.ต.ต.ชนันนัทธ์ สารถวัลย์แพศย์ ผบก.ปอท., พ.ต.อ.วัชรพันธ์ ศิริพากย์, พ.ต.อ.เนติ วงษ์กุหลาบ รอง ผบก.ปอท., ว่าที่ พ.ต.อ.นิธิ ตรีสุวรรณ ผกก.3 บก.ปอศ.รรท.ผกก.2 บก.ปอท., พ.ต.ท.สัตตเมธ ใจแก้ว, พ.ต.ท.ธนะ ว่องทรง รอง ผกก.2 บก.ปอท.
 

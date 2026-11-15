@@ -160,7 +160,12 @@ function readTabAsObjects(ss, tabName) {
     for (var j = 0; j < headers.length; j++) {
       var val = row[j];
       if (val instanceof Date) {
-        val = Utilities.formatDate(val, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        var hdr = String(headers[j] || '');
+        if (hdr.indexOf('เวลา') !== -1 || val.getFullYear() <= 1900) {
+          val = Utilities.formatDate(val, Session.getScriptTimeZone(), 'HH:mm');
+        } else {
+          val = Utilities.formatDate(val, Session.getScriptTimeZone(), 'dd/MM/yyyy');
+        }
       }
       obj[headers[j]] = val === null || val === undefined ? '' : String(val);
     }
@@ -195,6 +200,11 @@ function writeObjectsToTab(ss, tabName, rows) {
       return v === undefined || v === null ? '' : v;
     });
   });
+  for (var c = 0; c < headers.length; c++) {
+    if (String(headers[c] || '').indexOf('เวลา') !== -1) {
+      sheet.getRange(2, c + 1, matrix.length, 1).setNumberFormat('@');
+    }
+  }
   sheet.getRange(2, 1, matrix.length, headers.length).setValues(matrix);
 }
 

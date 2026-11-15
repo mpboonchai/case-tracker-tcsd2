@@ -25,6 +25,7 @@ import {
   extractYear,
   extractMonth,
   calculateAge,
+  formatTimeHHMM,
   normalizeImageUrl,
   generateLineReportText,
   downloadTemplateDocument
@@ -797,7 +798,10 @@ export default function ArrestsView({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <span className="text-slate-400">วัน/เวลาจับกุม:</span>{' '}
-                      {formatThaiDate(detailWarrant.arrestDate)} {detailWarrant.arrestTime ? `เวลา ${detailWarrant.arrestTime} น.` : ''}
+                      {formatThaiDate(detailWarrant.arrestDate)}{' '}
+                      {formatTimeHHMM(detailWarrant.arrestTime)
+                        ? `เวลา ${formatTimeHHMM(detailWarrant.arrestTime)} น.`
+                        : ''}
                     </div>
                     <div>
                       <span className="text-slate-400">สถานที่จับกุม:</span>{' '}

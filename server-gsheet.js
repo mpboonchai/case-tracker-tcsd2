@@ -71,6 +71,32 @@ export function normalizeImageUrl(url) {
   return s;
 }
 
+export function formatTimeHHMM(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (!s || s === '-') return '';
+  const isoTime = s.match(/T(\d{2}):(\d{2})/);
+  if (isoTime) return `${isoTime[1]}:${isoTime[2]}`;
+  if (/^1899-\d{2}-\d{2}$/.test(s) || /^\d{2}\/\d{2}\/1899$/.test(s)) return '';
+  const hm = s.match(/^(\d{1,2})[:.](\d{2})(?:[:.]\d{2})?$/);
+  if (hm) {
+    const hh = Number(hm[1]);
+    const mm = Number(hm[2]);
+    if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    }
+  }
+  const four = s.match(/^(\d{2})(\d{2})$/);
+  if (four) {
+    const hh = Number(four[1]);
+    const mm = Number(four[2]);
+    if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {
+      return `${four[1]}:${four[2]}`;
+    }
+  }
+  return s;
+}
+
 const FILE_FIELDS = [
   ...IMAGE_FIELDS,
   'warrantFileUrl',
@@ -288,13 +314,13 @@ function toSheetRows(collection, items, personnel = []) {
         'เบอร์โทรศัพท์': w.relativePhone || '',
         'ความเกี่ยวข้อง': w.relativeRelation || '',
         'วันที่จับกุม': w.arrestDate || '',
-        'เวลาที่จับกุม': w.arrestTime || '',
+        'เวลาที่จับกุม': formatTimeHHMM(w.arrestTime),
         'สถานที่จับกุม': w.arrestLocation || '',
         'ตำบล/แขวง2': w.arrestSubdistrict || '',
         'อำเภอ/เขต2': w.arrestDistrict || '',
         'จังหวัด2': w.arrestProvince || '',
         'วันที่บันทึก': w.recordDate || '',
-        'เวลาที่บันทึก': w.recordTime || '',
+        'เวลาที่บันทึก': formatTimeHHMM(w.recordTime),
         'สถานที่ทำการบันทึก': w.recordLocation || '',
         'ตำบล/แขวง3': w.recordSubdistrict || '',
         'อำเภอ/เขต3': w.recordDistrict || '',
@@ -468,13 +494,13 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         relativePhone: r['เบอร์โทรศัพท์'] || '',
         relativeRelation: r['ความเกี่ยวข้อง'] || '',
         arrestDate: r['วันที่จับกุม'] || '',
-        arrestTime: r['เวลาที่จับกุม'] || '',
+        arrestTime: formatTimeHHMM(r['เวลาที่จับกุม']) || formatTimeHHMM(existing?.arrestTime) || '',
         arrestLocation: r['สถานที่จับกุม'] || '',
         arrestSubdistrict: r['ตำบล/แขวง2'] || '',
         arrestDistrict: r['อำเภอ/เขต2'] || '',
         arrestProvince: r['จังหวัด2'] || '',
         recordDate: r['วันที่บันทึก'] || '',
-        recordTime: r['เวลาที่บันทึก'] || '',
+        recordTime: formatTimeHHMM(r['เวลาที่บันทึก']) || formatTimeHHMM(existing?.recordTime) || '',
         recordLocation: r['สถานที่ทำการบันทึก'] || '',
         recordSubdistrict: r['ตำบล/แขวง3'] || '',
         recordDistrict: r['อำเภอ/เขต3'] || '',
