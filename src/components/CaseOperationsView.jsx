@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { CASE_OPERATION_STATUSES } from '../data/initialData';
 import { formatThaiDate } from '../services/storage';
+import DateInput, { getTodayDMY, toDMY } from './DateInput';
 
 const STATUS_CONFIG = {
   'กำลังสืบสวน': {
@@ -86,7 +87,7 @@ export default function CaseOperationsView({
     details: '',
     additionalNotes: '',
     leadOfficerId: '',
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: getTodayDMY(),
     driveFolderUrl: '',
     relatedLinks: ''
   });
@@ -223,7 +224,7 @@ export default function CaseOperationsView({
       details: '',
       additionalNotes: '',
       leadOfficerId: personnel[0]?.id || '',
-      startDate: new Date().toISOString().split('T')[0],
+      startDate: getTodayDMY(),
       driveFolderUrl: '',
       relatedLinks: ''
     });
@@ -242,7 +243,7 @@ export default function CaseOperationsView({
       details: op.details || '',
       additionalNotes: op.additionalNotes || '',
       leadOfficerId: op.leadOfficerId || '',
-      startDate: op.startDate || new Date().toISOString().split('T')[0],
+      startDate: toDMY(op.startDate) || getTodayDMY(),
       driveFolderUrl: op.driveFolderUrl || '',
       relatedLinks: op.relatedLinks || ''
     });
@@ -283,7 +284,7 @@ export default function CaseOperationsView({
       details: op.details || '',
       additionalNotes: op.additionalNotes || '',
       leadOfficerId: op.leadOfficerId || '',
-      startDate: op.startDate || new Date().toISOString().split('T')[0],
+      startDate: toDMY(op.startDate) || getTodayDMY(),
       driveFolderUrl: op.driveFolderUrl || '',
       relatedLinks: op.relatedLinks || '',
       updatedAt: new Date().toISOString()
@@ -1286,8 +1287,7 @@ export default function CaseOperationsView({
                   <label className="block text-xs font-bold text-slate-300 mb-1">
                     วันที่เริ่มเคส
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={formData.startDate}
                     onChange={(e) =>
                       setFormData({ ...formData, startDate: e.target.value })

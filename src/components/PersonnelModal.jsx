@@ -6,6 +6,7 @@ import {
   DIVISION_OPTIONS,
   PERSONNEL_STATUS_OPTIONS
 } from '../data/initialData';
+import DateInput from './DateInput';
 
 export default function PersonnelModal({ isOpen, onClose, person, onSave }) {
   const [form, setForm] = useState({
@@ -243,8 +244,7 @@ export default function PersonnelModal({ isOpen, onClose, person, onSave }) {
               <label className="block text-[11px] font-semibold text-slate-300 mb-1">
                 วัน/เดือน/ปี เกิด <span className="text-red-400">*</span>
               </label>
-              <input
-                type="date"
+              <DateInput
                 required
                 value={form.dob}
                 onChange={(e) => setField('dob', e.target.value)}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShieldAlert, Save, Users, Check, Camera, Upload, Trash2 } from 'lucide-react';
 import { THAI_PROVINCES } from '../data/initialData';
+import DateInput, { getTodayDMY, toDMY } from './DateInput';
 
 const PHOTO_SLOTS = [
   { key: 'photoArrest', label: '1. รูปขณะจับกุม' },
@@ -93,15 +94,15 @@ export default function ArrestRecordModal({
 
   useEffect(() => {
     if (!isOpen || !warrant) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayDMY();
     setFormData({
-      arrestDate: warrant.arrestDate || today,
+      arrestDate: toDMY(warrant.arrestDate) || today,
       arrestTime: warrant.arrestTime || '09:00',
       arrestLocation: warrant.arrestLocation || '',
       arrestSubdistrict: warrant.arrestSubdistrict || '',
       arrestDistrict: warrant.arrestDistrict || '',
       arrestProvince: warrant.arrestProvince || warrant.province || 'กรุงเทพมหานคร',
-      recordDate: warrant.recordDate || today,
+      recordDate: toDMY(warrant.recordDate) || today,
       recordTime: warrant.recordTime || '10:30',
       recordLocation: warrant.recordLocation || 'กก.2 บก.ปอท.',
       recordSubdistrict: warrant.recordSubdistrict || 'จอมพล',
@@ -206,8 +207,7 @@ export default function ArrestRecordModal({
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
                 <label className={labelClass}>วันที่จับกุม *</label>
-                <input
-                  type="date"
+                <DateInput
                   required
                   value={formData.arrestDate}
                   onChange={(e) => updateField('arrestDate', e.target.value)}
@@ -278,8 +278,7 @@ export default function ArrestRecordModal({
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div>
                 <label className={labelClass}>วันที่ทำบันทึก</label>
-                <input
-                  type="date"
+                <DateInput
                   value={formData.recordDate}
                   onChange={(e) => updateField('recordDate', e.target.value)}
                   className={inputClass}

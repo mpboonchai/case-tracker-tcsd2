@@ -16,6 +16,7 @@ import {
   Users
 } from 'lucide-react';
 import { AGENCY_PRESETS, TASK_CATEGORIES } from '../data/initialData';
+import DateInput, { getTodayDMY, toDMY } from './DateInput';
 
 export default function CaseModal({ 
   isOpen, 
@@ -57,8 +58,8 @@ export default function CaseModal({
       setCategory(caseData.category || 'งานสืบสวน');
       setDocNumber(caseData.docNumber || '');
       setDetails(caseData.details || '');
-      setCreatedAt(caseData.createdAt || new Date().toISOString().slice(0, 10));
-      setDeadline(caseData.deadline || '');
+      setCreatedAt(toDMY(caseData.createdAt) || getTodayDMY());
+      setDeadline(toDMY(caseData.deadline) || '');
       setPriority(caseData.priority || 'normal');
       setStatus(caseData.status || 'in_progress');
       setTargetAgency(caseData.targetAgency || '');
@@ -88,11 +89,14 @@ export default function CaseModal({
       setCategory('งานสืบสวน');
       setDocNumber('');
       setDetails('');
-      setCreatedAt(new Date().toISOString().slice(0, 10));
+      setCreatedAt(getTodayDMY());
       
       const d = new Date();
       d.setDate(d.getDate() + 7);
-      setDeadline(d.toISOString().slice(0, 10));
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      setDeadline(`${dd}/${mm}/${yyyy}`);
       
       setPriority('normal');
       setStatus('in_progress');
@@ -388,8 +392,7 @@ export default function CaseModal({
                   <label className="block text-[11px] font-semibold text-slate-300 mb-1">
                     วันที่เริ่มสืบสวน
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={createdAt}
                     onChange={(e) => setCreatedAt(e.target.value)}
                     className="w-full px-2.5 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-white focus:outline-none focus:border-amber-400"
@@ -400,8 +403,7 @@ export default function CaseModal({
                   <label className="block text-[11px] font-semibold text-slate-300 mb-1">
                     วันครบกำหนด (Deadline)
                   </label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={deadline}
                     onChange={(e) => setDeadline(e.target.value)}
                     className="w-full px-2.5 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-amber-300 focus:outline-none focus:border-amber-400"

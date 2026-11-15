@@ -21,6 +21,8 @@ import {
 import {
   formatThaiDate,
   formatThaiDateFull,
+  extractYear,
+  extractMonth,
   generateLineReportText,
   downloadTemplateDocument
 } from '../services/storage';
@@ -65,7 +67,8 @@ export default function ArrestsView({
     const years = new Set();
     warrants.forEach(w => {
       const d = w.arrestDate || w.issueDate;
-      if (d && d.length >= 4) years.add(d.slice(0, 4));
+      const y = extractYear(d);
+      if (y) years.add(y);
     });
     if (years.size === 0) years.add(String(new Date().getFullYear()));
     return Array.from(years).sort((a, b) => b.localeCompare(a));
@@ -125,11 +128,10 @@ export default function ArrestsView({
 
     const refDate = w.status === 'จับกุมแล้ว' ? (w.arrestDate || w.issueDate) : w.issueDate;
     if (yearFilter !== 'all') {
-      if (!refDate || !refDate.startsWith(yearFilter)) return false;
+      if (!refDate || extractYear(refDate) !== yearFilter) return false;
     }
     if (monthFilter !== 'all') {
-      const m = refDate?.slice(5, 7);
-      if (m !== monthFilter) return false;
+      if (!refDate || extractMonth(refDate) !== monthFilter) return false;
     }
     return true;
   };
@@ -163,9 +165,9 @@ export default function ArrestsView({
   const monthlyCounts = useMemo(() => {
     const counts = Array(12).fill(0);
     warrants.forEach(w => {
-      if (w.status === 'จับกุมแล้ว' && w.arrestDate?.startsWith(chartYear)) {
-        const mIdx = parseInt(w.arrestDate.slice(5, 7), 10) - 1;
-        if (mIdx >= 0 && mIdx < 12) counts[mIdx] += 1;
+      if (w.status === 'จับกุมแล้ว' && extractYear(w.arrestDate) === chartYear) {
+        const m = parseInt(extractMonth(w.arrestDate), 10);
+        if (m >= 1 && m <= 12) counts[m - 1] += 1;
       }
     });
     return counts;

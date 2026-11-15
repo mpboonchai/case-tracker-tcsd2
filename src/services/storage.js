@@ -145,6 +145,30 @@ export const saveCases = async (cases) => {
   return cases;
 };
 
+// Parse DD/MM/YYYY or YYYY-MM-DD string into a valid Date object
+export const parseDateString = (dateStr) => {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (!s || s === '-') return null;
+
+  // DD/MM/YYYY or D/M/YYYY
+  const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const d = new Date(Number(slashMatch[3]), Number(slashMatch[2]) - 1, Number(slashMatch[1]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // YYYY-MM-DD
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const d = new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 // Calculate Days remaining or overdue
 export const getDeadlineStatus = (deadlineStr) => {
   if (!deadlineStr) return { text: 'ไม่ระบุ', type: 'none', days: 0 };
@@ -152,7 +176,8 @@ export const getDeadlineStatus = (deadlineStr) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  const deadline = new Date(deadlineStr);
+  const deadline = parseDateString(deadlineStr);
+  if (!deadline) return { text: 'ไม่ระบุ', type: 'none', days: 0 };
   deadline.setHours(0, 0, 0, 0);
   
   const diffTime = deadline - today;
@@ -224,6 +249,26 @@ export const formatThaiDate = (dateStr) => {
 
 export const formatThaiDateFull = (dateStr) => {
   return formatThaiDate(dateStr);
+};
+
+export const extractYear = (dateStr) => {
+  if (!dateStr) return '';
+  const s = String(dateStr).trim();
+  const dmyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmyMatch) return dmyMatch[3];
+  const isoMatch = s.match(/^(\d{4})/);
+  if (isoMatch) return isoMatch[1];
+  return '';
+};
+
+export const extractMonth = (dateStr) => {
+  if (!dateStr) return '';
+  const s = String(dateStr).trim();
+  const dmyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmyMatch) return dmyMatch[2].padStart(2, '0');
+  const isoMatch = s.match(/^\d{4}-(\d{2})/);
+  if (isoMatch) return isoMatch[1];
+  return '';
 };
 
 // Export to Excel with Official TCSD / CIB layout
@@ -348,8 +393,8 @@ export const saveOperations = (list) => saveCollection(STORAGE_KEYS.OPERATIONS, 
 
 export const calculateAge = (dobStr) => {
   if (!dobStr) return '';
-  const dob = new Date(dobStr);
-  if (isNaN(dob.getTime())) return '';
+  const dob = parseDateString(dobStr);
+  if (!dob) return '';
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
   const m = today.getMonth() - dob.getMonth();

@@ -27,8 +27,15 @@ const THAI_MONTHS_SHORT = [
 
 function formatThaiDate(dateStr, short = false) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
+  const s = String(dateStr).trim();
+  const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  let d;
+  if (slashMatch) {
+    d = new Date(Number(slashMatch[3]), Number(slashMatch[2]) - 1, Number(slashMatch[1]));
+  } else {
+    d = new Date(s);
+  }
+  if (!d || isNaN(d.getTime())) return dateStr;
   const day = d.getDate();
   const month = short ? THAI_MONTHS_SHORT[d.getMonth()] : THAI_MONTHS_FULL[d.getMonth()];
   const year = d.getFullYear() + 543;

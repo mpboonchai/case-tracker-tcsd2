@@ -18,6 +18,7 @@ import {
   THAI_PROVINCES
 } from '../data/initialData';
 import { calculateAge } from '../services/storage';
+import DateInput, { getTodayDMY } from './DateInput';
 
 const EMPTY_WARRANT = {
   folderId: '',
@@ -25,7 +26,7 @@ const EMPTY_WARRANT = {
   caseName: '',
   court: 'ศาลอาญา',
   warrantNumber: '',
-  issueDate: new Date().toISOString().slice(0, 10),
+  issueDate: getTodayDMY(),
   charge: '',
   owner: 'หมายจับภายใน',
   gender: 'ชาย',
@@ -340,8 +341,7 @@ export default function WarrantModal({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className={labelClass}>วันที่ออกหมาย</label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={formData.issueDate}
                     onChange={(e) => updateField('issueDate', e.target.value)}
                     className={inputClass}
@@ -548,8 +548,7 @@ export default function WarrantModal({
                 </div>
                 <div>
                   <label className={labelClass}>วัน/เดือน/ปีเกิด</label>
-                  <input
-                    type="date"
+                  <DateInput
                     value={formData.dob}
                     onChange={(e) => updateField('dob', e.target.value)}
                     className={inputClass}
