@@ -151,6 +151,9 @@ export async function offloadImagesToDrive(items, previousItems = []) {
   for (const item of items) {
     const copy = { ...item };
     const prev = Array.isArray(previousItems) ? previousItems.find((p) => p.id === copy.id) : null;
+    if (!copy.folderId && prev?.folderId) {
+      copy.folderId = prev.folderId;
+    }
 
     const hasBase64Upload = FILE_FIELDS.some(
       (f) => typeof copy[f] === 'string' && copy[f].startsWith('data:')
@@ -181,9 +184,9 @@ export async function offloadImagesToDrive(items, previousItems = []) {
             prefix: copy.prefix || '',
             firstName: copy.firstName || '',
             lastName: copy.lastName || '',
-            existingFolderId: copy.folderId || '',
+            existingFolderId: copy.folderId || prev?.folderId || '',
           }),
-          signal: AbortSignal.timeout(15000),
+          signal: AbortSignal.timeout(30000),
         });
         if (folderRes.ok) {
           const folderJson = await folderRes.json();

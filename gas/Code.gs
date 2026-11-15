@@ -76,6 +76,11 @@ function doPost(e) {
       return jsonResponse(result);
     }
 
+    if (action === 'migrateExistingFilesToFolders') {
+      var migrateResult = migrateExistingFilesToFolders();
+      return jsonResponse(migrateResult);
+    }
+
     if (action === 'sync') {
       var tabName = TAB_MAP[body.collection];
       if (!tabName) return jsonResponse({ success: false, error: 'Unknown collection' });
@@ -133,6 +138,61 @@ function onEdit(e) {
         sheet.getRange(firstDataRow + i, 1).setValue(String(baseTs + i));
       }
     }
+
+    // Auto-rename Google Drive folder if Warrant Number or Suspect Name is edited in 'การจับกุม'
+    if (sheetName === (TAB_MAP['warrants'] || 'การจับกุม')) {
+      var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+      var colMap = {};
+      for (var c = 0; c < headers.length; c++) {
+        colMap[String(headers[c] || '').trim()] = c + 1;
+      }
+      var wnCol = colMap['เลขหมายจับ'];
+      var prefixCol = colMap['คำนำหน้าชื่อผู้ต้องหา'];
+      var fnCol = colMap['ชื่อผู้ต้องหา'];
+      var lnCol = colMap['นามสกุลผู้ต้องหา'];
+      var folderCol = colMap['Folder_ID'];
+      var caseCol = colMap['Case'];
+
+      var editedColStart = e.range.getColumn();
+      var editedColEnd = editedColStart + e.range.getNumColumns() - 1;
+
+      var relevantCols = [wnCol, prefixCol, fnCol, lnCol, caseCol].filter(Boolean);
+      var isRelevant = relevantCols.some(function(col) {
+        return col >= editedColStart && col <= editedColEnd;
+      });
+
+      if (isRelevant && folderCol) {
+        for (var r = 0; r < rowCount; r++) {
+          var currentRow = rowValues[r];
+          var fid = String(currentRow[folderCol - 1] || '').trim();
+          var wn = wnCol ? String(currentRow[wnCol - 1] || '').trim() : '';
+          var pfx = prefixCol ? String(currentRow[prefixCol - 1] || '').trim() : '';
+          var fn = fnCol ? String(currentRow[fnCol - 1] || '').trim() : '';
+          var ln = lnCol ? String(currentRow[lnCol - 1] || '').trim() : '';
+          var cName = caseCol ? String(currentRow[caseCol - 1] || '').trim() : '';
+
+          if (fid || (fn || wn)) {
+            try {
+              var res = ensureSuspectFolder({
+                caseName: cName,
+                warrantNumber: wn,
+                prefix: pfx,
+                firstName: fn,
+                lastName: ln,
+                existingFolderId: fid
+              });
+              if (res && res.folderId && (!fid || fid !== res.folderId)) {
+                sheet.getRange(firstDataRow + r, folderCol).setValue(res.folderId);
+              }
+              sheet.getRange(firstDataRow + r, folderCol).setNote('');
+            } catch (driveErr) {
+              // Simple trigger onEdit cannot call DriveApp directly; mark note so next Web App sync/read renames it
+              sheet.getRange(firstDataRow + r, folderCol).setNote('NEEDS_RENAME');
+            }
+          }
+        }
+      }
+    }
   } catch (err) {
     // ignore trigger errors
   }
@@ -141,9 +201,27 @@ function onEdit(e) {
 function readTabAsObjects(ss, tabName) {
   var sheet = ss.getSheetByName(tabName);
   if (!sheet) return [];
-  var values = sheet.getDataRange().getValues();
+  var range = sheet.getDataRange();
+  var values = range.getValues();
   if (values.length < 2) return [];
   var headers = values[0];
+  var isWarrantsTab = tabName === (TAB_MAP['warrants'] || 'การจับกุม');
+  var folderColIdx = -1;
+  var folderNotes = null;
+  if (isWarrantsTab) {
+    for (var hIdx = 0; hIdx < headers.length; hIdx++) {
+      if (String(headers[hIdx] || '').trim() === 'Folder_ID') {
+        folderColIdx = hIdx;
+        break;
+      }
+    }
+    if (folderColIdx !== -1) {
+      try {
+        folderNotes = sheet.getRange(1, folderColIdx + 1, values.length, 1).getNotes();
+      } catch (e) {}
+    }
+  }
+
   var out = [];
   var baseTs = Date.now();
   for (var i = 1; i < values.length; i++) {
@@ -169,6 +247,26 @@ function readTabAsObjects(ss, tabName) {
       }
       obj[headers[j]] = val === null || val === undefined ? '' : String(val);
     }
+
+    // Process pending folder rename flagged by simple onEdit trigger
+    if (isWarrantsTab && folderColIdx !== -1 && folderNotes && folderNotes[i] && folderNotes[i][0] === 'NEEDS_RENAME') {
+      try {
+        var renameRes = ensureSuspectFolder({
+          caseName: obj['Case'] || '',
+          warrantNumber: obj['เลขหมายจับ'] || '',
+          prefix: obj['คำนำหน้าชื่อผู้ต้องหา'] || '',
+          firstName: obj['ชื่อผู้ต้องหา'] || '',
+          lastName: obj['นามสกุลผู้ต้องหา'] || '',
+          existingFolderId: obj['Folder_ID'] || ''
+        });
+        if (renameRes && renameRes.folderId) {
+          obj['Folder_ID'] = renameRes.folderId;
+          sheet.getRange(i + 1, folderColIdx + 1).setValue(renameRes.folderId);
+        }
+        sheet.getRange(i + 1, folderColIdx + 1).setNote('');
+      } catch (e) {}
+    }
+
     out.push(obj);
   }
   return out;
@@ -188,11 +286,66 @@ function writeObjectsToTab(ss, tabName, rows) {
   if (lastCol === 0) return;
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
+  var isWarrantsTab = tabName === (TAB_MAP['warrants'] || 'การจับกุม');
+  var existingById = {};
   var lastRow = sheet.getLastRow();
   if (lastRow > 1) {
+    if (isWarrantsTab) {
+      var prevData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+      var colIdx = {};
+      for (var hc = 0; hc < headers.length; hc++) {
+        colIdx[String(headers[hc] || '').trim()] = hc;
+      }
+      for (var pr = 0; pr < prevData.length; pr++) {
+        var pRow = prevData[pr];
+        var pid = colIdx['ID'] !== undefined ? String(pRow[colIdx['ID']] || '').trim() : '';
+        if (pid) {
+          existingById[pid] = {
+            folderId: colIdx['Folder_ID'] !== undefined ? String(pRow[colIdx['Folder_ID']] || '').trim() : '',
+            warrantNumber: colIdx['เลขหมายจับ'] !== undefined ? String(pRow[colIdx['เลขหมายจับ']] || '').trim() : '',
+            prefix: colIdx['คำนำหน้าชื่อผู้ต้องหา'] !== undefined ? String(pRow[colIdx['คำนำหน้าชื่อผู้ต้องหา']] || '').trim() : '',
+            firstName: colIdx['ชื่อผู้ต้องหา'] !== undefined ? String(pRow[colIdx['ชื่อผู้ต้องหา']] || '').trim() : '',
+            lastName: colIdx['นามสกุลผู้ต้องหา'] !== undefined ? String(pRow[colIdx['นามสกุลผู้ต้องหา']] || '').trim() : '',
+            caseName: colIdx['Case'] !== undefined ? String(pRow[colIdx['Case']] || '').trim() : ''
+          };
+        }
+      }
+    }
     sheet.getRange(2, 1, lastRow - 1, lastCol).clearContent();
   }
   if (!rows || rows.length === 0) return;
+
+  if (isWarrantsTab) {
+    for (var rIdx = 0; rIdx < rows.length; rIdx++) {
+      var rObj = rows[rIdx];
+      var rid = String(rObj['ID'] || '').trim();
+      var prevInfo = rid ? existingById[rid] : null;
+      if (!rObj['Folder_ID'] && prevInfo && prevInfo.folderId) {
+        rObj['Folder_ID'] = prevInfo.folderId;
+      }
+      var changed = !prevInfo ||
+        prevInfo.warrantNumber !== String(rObj['เลขหมายจับ'] || '').trim() ||
+        prevInfo.firstName !== String(rObj['ชื่อผู้ต้องหา'] || '').trim() ||
+        prevInfo.lastName !== String(rObj['นามสกุลผู้ต้องหา'] || '').trim() ||
+        prevInfo.prefix !== String(rObj['คำนำหน้าชื่อผู้ต้องหา'] || '').trim() ||
+        prevInfo.caseName !== String(rObj['Case'] || '').trim();
+      if (changed && (rObj['ชื่อผู้ต้องหา'] || rObj['เลขหมายจับ'] || rObj['Case'])) {
+        try {
+          var fRes = ensureSuspectFolder({
+            caseName: rObj['Case'] || '',
+            warrantNumber: rObj['เลขหมายจับ'] || '',
+            prefix: rObj['คำนำหน้าชื่อผู้ต้องหา'] || '',
+            firstName: rObj['ชื่อผู้ต้องหา'] || '',
+            lastName: rObj['นามสกุลผู้ต้องหา'] || '',
+            existingFolderId: rObj['Folder_ID'] || ''
+          });
+          if (fRes && fRes.folderId) {
+            rObj['Folder_ID'] = fRes.folderId;
+          }
+        } catch (e) {}
+      }
+    }
+  }
 
   var matrix = rows.map(function(obj) {
     return headers.map(function(h) {
@@ -241,13 +394,13 @@ function buildSuspectFolderName(warrantNumber, prefix, firstName, lastName) {
 }
 
 function ensureSuspectFolder(body) {
-  var rootFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   var caseName = String(body.caseName || '').trim().replace(/[\/\\:*?"<>|]/g, '-');
-  var caseFolder = caseName ? getOrCreateSubFolder(rootFolder, caseName) : rootFolder;
   var expectedName = buildSuspectFolderName(body.warrantNumber, body.prefix, body.firstName, body.lastName);
+  var fullName = (String(body.prefix || '') + String(body.firstName || '') + (body.lastName ? '_' + String(body.lastName) : '')).trim().replace(/\s+/g, '_');
 
   var existingId = extractDriveId(body.existingFolderId);
   var suspectFolder = null;
+  var caseFolder = null;
 
   if (existingId) {
     try {
@@ -257,17 +410,16 @@ function ensureSuspectFolder(body) {
         if (suspectFolder.getName() !== expectedName) {
           suspectFolder.setName(expectedName);
         }
-        // Move to caseFolder if caseName changed and parent differs
         var parents = suspectFolder.getParents();
-        var inCaseFolder = false;
-        while (parents.hasNext()) {
-          if (parents.next().getId() === caseFolder.getId()) {
-            inCaseFolder = true;
-            break;
+        var parentFolder = parents.hasNext() ? parents.next() : null;
+        if (parentFolder && (!caseName || parentFolder.getName() === caseName)) {
+          caseFolder = parentFolder;
+        } else {
+          var rootFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+          caseFolder = caseName ? getOrCreateSubFolder(rootFolder, caseName) : rootFolder;
+          if (!parentFolder || parentFolder.getId() !== caseFolder.getId()) {
+            suspectFolder.moveTo(caseFolder);
           }
-        }
-        if (!inCaseFolder) {
-          suspectFolder.moveTo(caseFolder);
         }
       }
     } catch (e) {
@@ -275,8 +427,50 @@ function ensureSuspectFolder(body) {
     }
   }
 
+  if (!caseFolder) {
+    var root = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    caseFolder = caseName ? getOrCreateSubFolder(root, caseName) : root;
+  }
+
   if (!suspectFolder) {
-    suspectFolder = getOrCreateSubFolder(caseFolder, expectedName);
+    var exactIter = caseFolder.getFoldersByName(expectedName);
+    if (exactIter.hasNext()) {
+      suspectFolder = exactIter.next();
+    } else if (fullName) {
+      var allFolders = caseFolder.getFolders();
+      while (allFolders.hasNext()) {
+        var f = allFolders.next();
+        var fName = f.getName();
+        if (fName === fullName || fName.slice(-(fullName.length + 1)) === '_' + fullName) {
+          suspectFolder = f;
+          if (fName !== expectedName) {
+            suspectFolder.setName(expectedName);
+          }
+          break;
+        }
+      }
+    }
+    if (!suspectFolder) {
+      suspectFolder = getOrCreateSubFolder(caseFolder, expectedName);
+    }
+  }
+
+  if (fullName && suspectFolder) {
+    try {
+      var subIter = caseFolder.getFolders();
+      while (subIter.hasNext()) {
+        var other = subIter.next();
+        if (other.getId() === suspectFolder.getId()) continue;
+        var otherName = other.getName();
+        if (otherName === expectedName || otherName === fullName || otherName.slice(-(fullName.length + 1)) === '_' + fullName) {
+          var filesToMove = other.getFiles();
+          while (filesToMove.hasNext()) {
+            filesToMove.next().moveTo(suspectFolder);
+          }
+          other.setTrashed(true);
+        }
+      }
+    } catch (e) {}
   }
 
   return {
@@ -315,5 +509,105 @@ function saveBase64ToDrive(dataUrl, fileName, folderId) {
     url: url,
     fileId: file.getId(),
     isImage: isImage
+  };
+}
+
+/**
+ * Scan sheet 'การจับกุม', create Case > Suspect folders for all rows,
+ * and move existing files from root folder into the suspect folder.
+ */
+function migrateExistingFilesToFolders() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(TAB_MAP['warrants'] || 'การจับกุม');
+  if (!sheet) return { success: false, error: 'Sheet not found' };
+
+  var rootFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2) return { success: true, count: 0 };
+
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var colMap = {};
+  for (var c = 0; c < headers.length; c++) {
+    colMap[String(headers[c] || '').trim()] = c + 1;
+  }
+
+  var folderIdCol = colMap['Folder_ID'];
+  var caseCol = colMap['Case'];
+  var wnCol = colMap['เลขหมายจับ'];
+  var prefixCol = colMap['คำนำหน้าชื่อผู้ต้องหา'];
+  var fnCol = colMap['ชื่อผู้ต้องหา'];
+  var lnCol = colMap['นามสกุลผู้ต้องหา'];
+  var idCol = colMap['ID'];
+
+  var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var processed = 0;
+  var movedFiles = 0;
+
+  for (var i = 0; i < data.length; i++) {
+    var row = data[i];
+    var rowIndex = i + 2;
+    var rawId = idCol ? String(row[idCol - 1] || '').trim() : '';
+    var caseName = caseCol ? String(row[caseCol - 1] || '').trim() : '';
+    var wn = wnCol ? String(row[wnCol - 1] || '').trim() : '';
+    var pfx = prefixCol ? String(row[prefixCol - 1] || '').trim() : '';
+    var fn = fnCol ? String(row[fnCol - 1] || '').trim() : '';
+    var ln = lnCol ? String(row[lnCol - 1] || '').trim() : '';
+    var existingFid = folderIdCol ? String(row[folderIdCol - 1] || '').trim() : '';
+
+    if (!fn && !wn && !caseName) continue;
+
+    var folderRes = ensureSuspectFolder({
+      caseName: caseName,
+      warrantNumber: wn,
+      prefix: pfx,
+      firstName: fn,
+      lastName: ln,
+      existingFolderId: existingFid
+    });
+
+    if (folderRes && folderRes.folderId) {
+      if (folderIdCol && existingFid !== folderRes.folderId) {
+        sheet.getRange(rowIndex, folderIdCol).setValue(folderRes.folderId);
+      }
+      processed++;
+
+      // Move any files matching war-ID or suspect name from rootFolder to suspectFolder
+      var suspectFolder = DriveApp.getFolderById(folderRes.folderId);
+      var matchKeys = [];
+      if (rawId) matchKeys.push(rawId);
+      if (wn) matchKeys.push(wn.replace(/[\/\\:*?"<>|]/g, '-'));
+
+      // Check all files referenced in row cells for file IDs
+      for (var j = 0; j < headers.length; j++) {
+        var cellVal = String(row[j] || '');
+        var fileIdMatch = cellVal.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/) ||
+                          cellVal.match(/id=([a-zA-Z0-9_-]+)/) ||
+                          cellVal.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch) {
+          try {
+            var f = DriveApp.getFileById(fileIdMatch[1]);
+            var parents = f.getParents();
+            var alreadyIn = false;
+            while (parents.hasNext()) {
+              if (parents.next().getId() === folderRes.folderId) {
+                alreadyIn = true;
+                break;
+              }
+            }
+            if (!alreadyIn) {
+              f.moveTo(suspectFolder);
+              movedFiles++;
+            }
+          } catch (e) {}
+        }
+      }
+    }
+  }
+
+  return {
+    success: true,
+    suspectsProcessed: processed,
+    filesMoved: movedFiles
   };
 }

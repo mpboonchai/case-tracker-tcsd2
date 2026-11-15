@@ -829,14 +829,25 @@ export default function WarrantModal({
                 ยกเลิก
               </button>
               {step === 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="flex items-center gap-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"
-                >
-                  <span>ถัดไป (ข้อมูลผู้ต้องหา)</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="flex items-center gap-1 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition"
+                  >
+                    <span>ถัดไป (ข้อมูลผู้ต้องหา)</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  {editingWarrant && (
+                    <button
+                      type="submit"
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-md transition cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>บันทึกหมายจับ</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   {!editingWarrant && (

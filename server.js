@@ -239,7 +239,8 @@ async function syncFromGoogleSheet() {
     if (!pulled.success) return { synced: false, error: pulled.error };
 
     if (Array.isArray(pulled.warrants) && pulled.warrants.length > 0) {
-      writeJson(WARRANTS_FILE, pulled.warrants);
+      const syncedWarrants = await offloadImagesToDrive(pulled.warrants, localWarrants);
+      writeJson(WARRANTS_FILE, syncedWarrants);
     }
     if (Array.isArray(pulled.operations) && pulled.operations.length > 0) {
       // Merge any local operations not yet in Sheet
