@@ -710,7 +710,7 @@ export default function ArrestsView({
                   </span>
                 </h3>
                 <p className="text-[11px] text-slate-400">
-                  หมายจับ {detailWarrant.court} ที่ {detailWarrant.warrantNumber} • ออกหมาย {formatThaiDateFull(detailWarrant.issueDate) || '-'}
+                  หมายจับ {detailWarrant.court} ที่ {detailWarrant.warrantNumber} • ออกหมาย {formatThaiDate(detailWarrant.issueDate) || '-'}
                 </p>
               </div>
               <button
@@ -730,7 +730,7 @@ export default function ArrestsView({
                 <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-1.5">
                   <div className="text-[11px] font-bold text-amber-400">ข้อมูลผู้ต้องหา</div>
                   <div><span className="text-slate-400">เลขบัตรประชาชน:</span> <span className="font-mono text-white">{detailWarrant.nationalId || '-'}</span></div>
-                  <div><span className="text-slate-400">วันเกิด:</span> {formatThaiDateFull(detailWarrant.dob) || '-'} ({detailWarrant.age || '-'} ปี)</div>
+                  <div><span className="text-slate-400">วันเกิด:</span> {formatThaiDate(detailWarrant.dob) || '-'} ({detailWarrant.age || '-'} ปี)</div>
                   <div>
                     <span className="text-slate-400">ที่อยู่:</span>{' '}
                     {[
@@ -772,7 +772,7 @@ export default function ArrestsView({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <span className="text-slate-400">วัน/เวลาจับกุม:</span>{' '}
-                      {formatThaiDateFull(detailWarrant.arrestDate)} เวลา {detailWarrant.arrestTime} น.
+                      {formatThaiDate(detailWarrant.arrestDate)} {detailWarrant.arrestTime ? `เวลา ${detailWarrant.arrestTime} น.` : ''}
                     </div>
                     <div>
                       <span className="text-slate-400">สถานที่จับกุม:</span>{' '}

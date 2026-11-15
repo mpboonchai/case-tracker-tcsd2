@@ -189,23 +189,41 @@ export const getDeadlineStatus = (deadlineStr) => {
   }
 };
 
-// Format date to Thai format
+// Format date to dd/mm/yyyy format
 export const formatThaiDate = (dateStr) => {
   if (!dateStr) return '-';
+  const s = String(dateStr).trim();
+  if (!s || s === '-') return '-';
+
+  // DD/MM/YYYY or D/M/YYYY
+  const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const dd = slashMatch[1].padStart(2, '0');
+    const mm = slashMatch[2].padStart(2, '0');
+    const yyyy = slashMatch[3];
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  // YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+  }
+
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    const thaiMonths = [
-      'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
-      'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
-    ];
-    const day = d.getDate();
-    const month = thaiMonths[d.getMonth()];
-    const year = d.getFullYear() + 543;
-    return `${day} ${month} ${year}`;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   } catch {
     return dateStr;
   }
+};
+
+export const formatThaiDateFull = (dateStr) => {
+  return formatThaiDate(dateStr);
 };
 
 // Export to Excel with Official TCSD / CIB layout
@@ -337,17 +355,6 @@ export const calculateAge = (dobStr) => {
   const m = today.getMonth() - dob.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
   return age >= 0 ? age : '';
-};
-
-export const formatThaiDateFull = (dateStr) => {
-  if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const fullMonths = [
-    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-  ];
-  return `${d.getDate()} ${fullMonths[d.getMonth()]} ${d.getFullYear() + 543}`;
 };
 
 /**

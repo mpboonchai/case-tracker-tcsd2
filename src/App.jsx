@@ -143,7 +143,11 @@ export default function App() {
   // Toggle Checkbox handler (1. ขอข้อมูล, 2. ได้รับ, 3. ตรวจสอบ)
   const handleToggleCheck = async (caseId, field, newValue) => {
     const now = new Date();
-    const timestampStr = `${now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} ${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const timestampStr = `${dd}/${mm}/${yyyy} ${timeStr} น.`;
     
     const fieldNames = {
       check1_requested: '1. ขอข้อมูลแล้ว',

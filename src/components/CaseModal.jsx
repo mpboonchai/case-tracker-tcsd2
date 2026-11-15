@@ -125,7 +125,11 @@ export default function CaseModal({
 
     const assignedUserObj = users.find(u => u.id === assignedTo);
     const now = new Date();
-    const timestampStr = `${now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} ${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const timestampStr = `${dd}/${mm}/${yyyy} ${timeStr} น.`;
     
     let history = caseData?.history ? [...caseData.history] : [];
     
@@ -190,7 +194,11 @@ export default function CaseModal({
   const handleAddLogNote = () => {
     if (!newLogNote.trim() || !caseData) return;
     const now = new Date();
-    const timestampStr = `${now.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })} ${now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`;
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const timestampStr = `${dd}/${mm}/${yyyy} ${timeStr} น.`;
     
     const newEntry = {
       id: `hist-${Date.now()}`,
