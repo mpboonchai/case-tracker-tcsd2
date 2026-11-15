@@ -66,6 +66,7 @@ export default function WarrantModal({
   const [linksText, setLinksText] = useState('');
   const [dragActiveField, setDragActiveField] = useState(null);
   const [pasteNoticeField, setPasteNoticeField] = useState(null);
+  const [savedNextNotice, setSavedNextNotice] = useState('');
 
   const readImageFileAsDataUrl = (file) =>
     new Promise((resolve, reject) => {
@@ -205,6 +206,46 @@ export default function WarrantModal({
     onClose();
   };
 
+  const incrementWarrantNumber = (numStr) => {
+    const m = String(numStr || '').trim().match(/^(\d+)(\/.*)?$/);
+    if (!m) return '';
+    return `${Number(m[1]) + 1}${m[2] || ''}`;
+  };
+
+  const handleSaveAndNext = () => {
+    if (!formData.firstName.trim() && !formData.warrantNumber.trim() && !formData.caseName.trim()) {
+      alert('กรุณากรอกอย่างน้อย ชื่อผู้ต้องหา หรือ ชื่อเคส หรือ เลขที่หมายจับ');
+      return;
+    }
+    const linksArr = linksText
+      .split(/\n|,/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    onSave({
+      ...formData,
+      age: formData.age === '' ? '' : Number(formData.age),
+      relatedLinks: linksArr
+    });
+
+    const prevLabel = `${formData.prefix || ''}${formData.firstName || ''} ${formData.lastName || ''}`.trim() || formData.warrantNumber;
+    const nextWarrantNo = incrementWarrantNumber(formData.warrantNumber);
+
+    setFormData((prev) => ({
+      ...EMPTY_WARRANT,
+      caseName: prev.caseName,
+      court: prev.court,
+      issueDate: prev.issueDate,
+      charge: prev.charge,
+      owner: prev.owner,
+      assignedTo: prev.assignedTo,
+      linkedCaseId: prev.linkedCaseId,
+      folderId: prev.folderId,
+      warrantNumber: nextWarrantNo
+    }));
+    setSavedNextNotice(`✓ บันทึก "${prevLabel}" เรียบร้อย — กรอกผู้ต้องหารายถัดไปได้เลย (จำเคส/ศาล/ข้อหาเดิมไว้ให้แล้ว)`);
+    setTimeout(() => setSavedNextNotice(''), 4500);
+  };
+
   const inputClass =
     'w-full px-3 py-2 rounded-lg bg-[#070D1E] border border-blue-900/60 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition';
   const labelClass = 'block text-[11px] font-semibold text-slate-300 mb-1';
@@ -266,6 +307,11 @@ export default function WarrantModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+          {savedNextNotice && (
+            <div className="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs font-semibold">
+              {savedNextNotice}
+            </div>
+          )}
           {step === 1 ? (
             <div className="space-y-3.5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -787,13 +833,26 @@ export default function WarrantModal({
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               ) : (
-                <button
-                  type="submit"
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-md transition"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>บันทึกหมายจับ</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {!editingWarrant && (
+                    <button
+                      type="button"
+                      onClick={handleSaveAndNext}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition cursor-pointer"
+                      title="บันทึกรายนี้แล้วค้างข้อมูลเคส/ศาล/ข้อหาเดิมไว้สำหรับกรอกรายถัดไปทันที"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>บันทึก & เพิ่มรายถัดไป</span>
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-md transition cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>บันทึกหมายจับ</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>

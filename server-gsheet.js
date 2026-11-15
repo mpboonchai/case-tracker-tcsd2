@@ -285,12 +285,12 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
   if (!Array.isArray(rows)) return null;
   return rows
     .filter((r) => (r['ชื่อผู้ต้องหา'] || '').trim() || (r['Case'] || '').trim() || (r['เลขหมายจับ'] || '').trim())
-    .map((r) => {
+    .map((r, idx) => {
       const rawId = String(r['ID'] || '').trim();
       const existing = existingWarrants.find(
-        (w) => String(w.id || '').replace(/^war-/, '') === rawId || w.id === rawId
+        (w) => rawId && (String(w.id || '').replace(/^war-/, '') === rawId || w.id === rawId)
       );
-      const id = existing?.id || (rawId ? (rawId.startsWith('war-') ? rawId : `war-${rawId}`) : `war-${Date.now()}`);
+      const id = existing?.id || (rawId ? (rawId.startsWith('war-') ? rawId : `war-${rawId}`) : `war-${Date.now()}-${idx}`);
 
       const arrestingOfficers = [];
       for (let i = 1; i <= 10; i++) {

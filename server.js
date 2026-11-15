@@ -120,9 +120,18 @@ app.post('/api/cases/sync', async (req, res) => {
   }
 });
 
-// Shared CRUD registration for Personnel & Warrants
+// Shared CRUD registration for Personnel, Warrants & Operations
+let lastSheetPullAt = 0;
+const SHEET_PULL_TTL_MS = 10000;
+
 const registerCollectionRoutes = (routeName, filePath, idPrefix) => {
-  app.get(`/api/${routeName}`, (_req, res) => {
+  app.get(`/api/${routeName}`, async (_req, res) => {
+    if (
+      (routeName === 'warrants' || routeName === 'operations') &&
+      Date.now() - lastSheetPullAt > SHEET_PULL_TTL_MS
+    ) {
+      await syncFromGoogleSheet();
+    }
     res.json(readJson(filePath, []));
   });
 
@@ -161,6 +170,7 @@ const registerCollectionRoutes = (routeName, filePath, idPrefix) => {
     writeJson(filePath, items);
     const personnel = readJson(PERSONNEL_FILE, []);
     const gas = await pushCollectionToGas(routeName, items, personnel);
+    lastSheetPullAt = Date.now();
     res.json({ success: true, count: items.length, googleSheetSynced: gas.synced });
   });
 };
@@ -240,6 +250,7 @@ async function syncFromGoogleSheet() {
       );
       writeJson(OPERATIONS_FILE, [...pulled.operations, ...localOnly]);
     }
+    lastSheetPullAt = Date.now();
     console.log(
       `[GAS Sync] Hydrated from Google Sheet: warrants=${pulled.warrants?.length ?? 0}, operations=${pulled.operations?.length ?? 0}`
     );

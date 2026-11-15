@@ -76,6 +76,54 @@ function doPost(e) {
   }
 }
 
+var AUTO_ID_SHEETS = {
+  'การจับกุม': true,
+  'เคสคดี': true,
+  'งานในความรับผิดชอบ': true,
+  'ข้อมูลกำลังพล': true
+};
+
+/**
+ * Simple Trigger: รัน ID อัตโนมัติเมื่อมีการพิมพ์หรือวางข้อมูลในแถวใหม่ของชีท
+ */
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    var sheet = e.range.getSheet();
+    var sheetName = sheet.getName();
+    if (!AUTO_ID_SHEETS[sheetName]) return;
+
+    var startRow = e.range.getRow();
+    var numRows = e.range.getNumRows();
+    if (startRow < 2 && startRow + numRows - 1 < 2) return;
+
+    var firstDataRow = Math.max(2, startRow);
+    var rowCount = startRow + numRows - firstDataRow;
+    if (rowCount <= 0) return;
+
+    var lastCol = sheet.getLastColumn();
+    if (lastCol < 2) return;
+
+    var headerFirst = String(sheet.getRange(1, 1).getValue() || '').trim();
+    if (headerFirst !== 'ID') return;
+
+    var rowValues = sheet.getRange(firstDataRow, 1, rowCount, lastCol).getValues();
+    var baseTs = Date.now();
+    for (var i = 0; i < rowValues.length; i++) {
+      var row = rowValues[i];
+      var currentId = String(row[0] || '').trim();
+      var hasOtherData = row.slice(1).some(function(cell) {
+        return String(cell || '').trim() !== '';
+      });
+      if (!currentId && hasOtherData) {
+        sheet.getRange(firstDataRow + i, 1).setValue(String(baseTs + i));
+      }
+    }
+  } catch (err) {
+    // ignore trigger errors
+  }
+}
+
 function readTabAsObjects(ss, tabName) {
   var sheet = ss.getSheetByName(tabName);
   if (!sheet) return [];
@@ -83,10 +131,17 @@ function readTabAsObjects(ss, tabName) {
   if (values.length < 2) return [];
   var headers = values[0];
   var out = [];
+  var baseTs = Date.now();
   for (var i = 1; i < values.length; i++) {
     var row = values[i];
     var hasAny = row.some(function(cell) { return String(cell || '').trim() !== ''; });
     if (!hasAny) continue;
+    // Auto-assign ID in sheet if column A is ID and currently empty
+    if (String(headers[0] || '').trim() === 'ID' && String(row[0] || '').trim() === '') {
+      var generatedId = String(baseTs + i);
+      row[0] = generatedId;
+      sheet.getRange(i + 1, 1).setValue(generatedId);
+    }
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
       var val = row[j];
