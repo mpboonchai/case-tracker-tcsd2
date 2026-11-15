@@ -70,6 +70,27 @@ export default function App() {
     initData();
   }, []);
 
+  // Auto-refresh Warrants & Case Operations when user switches back to this browser tab (e.g. after editing Google Sheet)
+  useEffect(() => {
+    let lastFocusRefresh = Date.now();
+    const handleWindowFocus = async () => {
+      if (Date.now() - lastFocusRefresh < 12000) return;
+      lastFocusRefresh = Date.now();
+      try {
+        const [freshWarrants, freshOps] = await Promise.all([
+          getWarrants(),
+          getOperations()
+        ]);
+        if (Array.isArray(freshWarrants)) setWarrants(freshWarrants);
+        if (Array.isArray(freshOps)) setOperations(freshOps);
+      } catch {
+        // ignore background focus sync error
+      }
+    };
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, []);
+
   // Check cloud connection
   useEffect(() => {
     const checkServer = async () => {
