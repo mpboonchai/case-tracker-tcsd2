@@ -17,7 +17,7 @@ import {
   WARRANT_STATUS_OPTIONS,
   THAI_PROVINCES
 } from '../data/initialData';
-import { calculateAge } from '../services/storage';
+import { calculateAge, normalizeImageUrl } from '../services/storage';
 import DateInput, { getTodayDMY } from './DateInput';
 
 const EMPTY_WARRANT = {
@@ -718,8 +718,14 @@ export default function WarrantModal({
                         <div className="mb-2 relative group rounded-lg overflow-hidden border border-blue-800/60 bg-slate-950 h-28 flex items-center justify-center">
                           {isImagePreview ? (
                             <img
-                              src={val}
+                              src={normalizeImageUrl(val)}
                               alt={label}
+                              onError={(e) => {
+                                const m = String(val || '').match(/([a-zA-Z0-9_-]{25,})/);
+                                if (m && !e.target.src.includes('thumbnail')) {
+                                  e.target.src = `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1200`;
+                                }
+                              }}
                               className="max-h-full max-w-full object-contain"
                             />
                           ) : (

@@ -248,20 +248,31 @@ async function resolveImageData(val) {
   }
   if (/^https?:\/\//i.test(val)) {
     let fetchUrl = val.trim();
-    const driveMatch = fetchUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
+    const driveMatch =
+      fetchUrl.match(/drive\.google\.com\/(?:file\/d\/|uc\?(?:.*&)?id=)([a-zA-Z0-9_-]+)/i) ||
+      fetchUrl.match(/drive\.google\.com\/open\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i) ||
+      fetchUrl.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i);
+
+    const candidateUrls = [];
     if (driveMatch) {
-      fetchUrl = `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+      candidateUrls.push(`https://lh3.googleusercontent.com/d/${driveMatch[1]}`);
+      candidateUrls.push(`https://drive.google.com/thumbnail?id=${driveMatch[1]}&sz=w1600`);
+    } else {
+      candidateUrls.push(fetchUrl);
     }
-    try {
-      const res = await fetch(fetchUrl, { signal: AbortSignal.timeout(10000) });
-      if (!res.ok) return null;
-      const ct = (res.headers.get('content-type') || '').toLowerCase();
-      if (!ct.includes('image')) return null;
-      const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg';
-      const arr = await res.arrayBuffer();
-      return { ext, buffer: Buffer.from(arr) };
-    } catch {
-      return null;
+
+    for (const url of candidateUrls) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+        if (!res.ok) continue;
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        if (!ct.includes('image')) continue;
+        const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg';
+        const arr = await res.arrayBuffer();
+        return { ext, buffer: Buffer.from(arr) };
+      } catch {
+        // try next candidate
+      }
     }
   }
   return null;

@@ -51,6 +51,27 @@ const IMAGE_FIELDS = [
 ];
 
 /**
+ * Convert Google Drive uc / file / open links to reliable embeddable CDN links (lh3.googleusercontent.com)
+ * This avoids Google Drive's Cross-Origin-Resource-Policy: same-site restriction on <img> tags.
+ */
+export function normalizeImageUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const s = url.trim();
+  if (!s || s === '-') return '';
+  if (s.startsWith('data:image/')) return s;
+
+  const m =
+    s.match(/drive\.google\.com\/uc\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i) ||
+    s.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i) ||
+    s.match(/drive\.google\.com\/open\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i);
+
+  if (m) {
+    return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  }
+  return s;
+}
+
+/**
  * Upload any base64 data:image/... fields on a warrant to Google Drive via GAS
  * so Google Sheet cells store Drive URLs instead of >50k-char base64 strings.
  */
@@ -78,7 +99,7 @@ export async function offloadImagesToDrive(items) {
           if (res.ok) {
             const json = await res.json();
             if (json.success && json.url) {
-              copy[field] = json.url;
+              copy[field] = normalizeImageUrl(json.url);
             }
           }
         } catch (err) {
@@ -328,9 +349,9 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         dob: r['วันเกิด'] || '',
         age: r['อายุ'] !== '' && r['อายุ'] !== undefined ? Number(r['อายุ']) || r['อายุ'] : '',
         nationalId: r['เลขประจำตัวประชาชน'] || '',
-        personPhotoUrl: r['ภาพถ่ายบุคคล'] || '',
-        houseRegUrl: r['ทะเบียนราษฎร'] || '',
-        naraiRegUrl: r['ทะเบียนราษฎร_Narai'] || '',
+        personPhotoUrl: normalizeImageUrl(r['ภาพถ่ายบุคคล']),
+        houseRegUrl: normalizeImageUrl(r['ทะเบียนราษฎร']),
+        naraiRegUrl: normalizeImageUrl(r['ทะเบียนราษฎร_Narai']),
         houseNo: r['บ้านเลขที่'] || '',
         moo: r['หมู่'] || '',
         road: r['ถนน'] || '',
@@ -342,11 +363,11 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         relatedFiles: r['ไฟล์เอกสารแนบ']
           ? String(r['ไฟล์เอกสารแนบ']).split(',').map((s) => s.trim()).filter(Boolean)
           : existing?.relatedFiles || [],
-        photoArrest: r['ภาพถ่ายขณะจับกุม'] || '',
-        photoFront: r['ภาพด้านหน้า'] || '',
-        photoBack: r['ภาพด้านหลัง'] || '',
-        photoLeft: r['ภาพด้านซ้าย'] || '',
-        photoRight: r['ภาพด้านขวา'] || '',
+        photoArrest: normalizeImageUrl(r['ภาพถ่ายขณะจับกุม']),
+        photoFront: normalizeImageUrl(r['ภาพด้านหน้า']),
+        photoBack: normalizeImageUrl(r['ภาพด้านหลัง']),
+        photoLeft: normalizeImageUrl(r['ภาพด้านซ้าย']),
+        photoRight: normalizeImageUrl(r['ภาพด้านขวา']),
         relativePrefix: r['คำนำหน้าชื่อญาติ'] || '',
         relativeFirstName: r['ชื่อญาติ'] || '',
         relativeLastName: r['นามสกุลญาติ'] || '',
@@ -370,9 +391,9 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         handoverLocation: r['สถานที่นำไปส่ง'] || '',
         notifierId,
         recorderId,
-        photoReport1: r['ภาพรายงาน_1'] || '',
-        photoReport2: r['ภาพรายงาน_2'] || '',
-        photoReport3: r['ภาพรายงาน_3'] || '',
+        photoReport1: normalizeImageUrl(r['ภาพรายงาน_1']),
+        photoReport2: normalizeImageUrl(r['ภาพรายงาน_2']),
+        photoReport3: normalizeImageUrl(r['ภาพรายงาน_3']),
         newsLink: r['ลิงก์ข่าว'] || '',
       };
     });

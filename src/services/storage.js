@@ -271,6 +271,27 @@ export const extractMonth = (dateStr) => {
   return '';
 };
 
+/**
+ * Convert Google Drive uc / file / open links to reliable embeddable CDN links (lh3.googleusercontent.com)
+ * This avoids Google Drive's Cross-Origin-Resource-Policy: same-site restriction on <img> tags.
+ */
+export const normalizeImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  const s = url.trim();
+  if (!s || s === '-') return '';
+  if (s.startsWith('data:image/')) return s;
+
+  const m =
+    s.match(/drive\.google\.com\/uc\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i) ||
+    s.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i) ||
+    s.match(/drive\.google\.com\/open\?(?:.*&)?id=([a-zA-Z0-9_-]+)/i);
+
+  if (m) {
+    return `https://lh3.googleusercontent.com/d/${m[1]}`;
+  }
+  return s;
+};
+
 // Export to Excel with Official TCSD / CIB layout
 export const exportToExcel = (cases, users = []) => {
   const userMap = users.reduce((acc, u) => {

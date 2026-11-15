@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ShieldAlert, Save, Users, Check, Camera, Upload, Trash2 } from 'lucide-react';
 import { THAI_PROVINCES } from '../data/initialData';
+import { normalizeImageUrl } from '../services/storage';
 import DateInput, { getTodayDMY, toDMY } from './DateInput';
 
 const PHOTO_SLOTS = [
@@ -553,8 +554,14 @@ export default function ArrestRecordModal({
                     {value ? (
                       <div className="relative w-full aspect-[3/4] rounded overflow-hidden border border-emerald-500/40 bg-black/40">
                         <img
-                          src={value}
+                          src={normalizeImageUrl(value)}
                           alt={slot.label}
+                          onError={(e) => {
+                            const m = String(value || '').match(/([a-zA-Z0-9_-]{25,})/);
+                            if (m && !e.target.src.includes('thumbnail')) {
+                              e.target.src = `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1200`;
+                            }
+                          }}
                           className="w-full h-full object-cover"
                         />
                         <button
@@ -645,8 +652,14 @@ export default function ArrestRecordModal({
                     {value ? (
                       <div className="relative w-full aspect-[16/10] rounded overflow-hidden border border-emerald-500/40 bg-black/40">
                         <img
-                          src={value}
+                          src={normalizeImageUrl(value)}
                           alt={slot.label}
+                          onError={(e) => {
+                            const m = String(value || '').match(/([a-zA-Z0-9_-]{25,})/);
+                            if (m && !e.target.src.includes('thumbnail')) {
+                              e.target.src = `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1200`;
+                            }
+                          }}
                           className="w-full h-full object-cover"
                         />
                         <button

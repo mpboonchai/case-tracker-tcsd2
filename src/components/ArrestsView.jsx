@@ -23,6 +23,7 @@ import {
   formatThaiDateFull,
   extractYear,
   extractMonth,
+  normalizeImageUrl,
   generateLineReportText,
   downloadTemplateDocument
 } from '../services/storage';
@@ -821,25 +822,34 @@ export default function ArrestsView({
                       ['photoReport1', 'รายงาน 1 (PPT)'],
                       ['photoReport2', 'รายงาน 2 (PPT)'],
                       ['photoReport3', 'รายงาน 3 (PPT)']
-                    ].map(([k, lbl]) =>
-                      detailWarrant[k] ? (
+                    ].map(([k, lbl]) => {
+                      const imgRaw = detailWarrant[k];
+                      if (!imgRaw) return null;
+                      const imgSrc = normalizeImageUrl(imgRaw);
+                      return (
                         <div key={k} className="space-y-1 text-center">
                           <a
-                            href={detailWarrant[k]}
+                            href={imgSrc}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="block"
                           >
                             <img
-                              src={detailWarrant[k]}
+                              src={imgSrc}
                               alt={lbl}
+                              onError={(e) => {
+                                const m = String(imgRaw || '').match(/([a-zA-Z0-9_-]{25,})/);
+                                if (m && !e.target.src.includes('thumbnail')) {
+                                  e.target.src = `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1200`;
+                                }
+                              }}
                               className="w-full aspect-[4/3] object-cover rounded-lg border border-blue-800/60 hover:border-amber-400 transition"
                             />
                           </a>
                           <div className="text-[10px] text-slate-400">{lbl}</div>
                         </div>
-                      ) : null
-                    )}
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -13,7 +13,7 @@ import {
   Filter
 } from 'lucide-react';
 import { POSITION_OPTIONS, DIVISION_OPTIONS } from '../data/initialData';
-import { calculateAge, formatThaiDate } from '../services/storage';
+import { calculateAge, formatThaiDate, normalizeImageUrl } from '../services/storage';
 import PersonnelModal from './PersonnelModal';
 
 export default function PersonnelView({
@@ -168,8 +168,14 @@ export default function PersonnelView({
                 <div className="flex items-start gap-3">
                   {p.photoUrl ? (
                     <img
-                      src={p.photoUrl}
+                      src={normalizeImageUrl(p.photoUrl)}
                       alt={p.firstName}
+                      onError={(e) => {
+                        const m = String(p.photoUrl || '').match(/([a-zA-Z0-9_-]{25,})/);
+                        if (m && !e.target.src.includes('thumbnail')) {
+                          e.target.src = `https://drive.google.com/thumbnail?id=${m[1]}&sz=w600`;
+                        }
+                      }}
                       className="w-12 h-12 rounded-xl object-cover border border-amber-400/40 shrink-0"
                     />
                   ) : (
@@ -246,8 +252,14 @@ export default function PersonnelView({
               <div className="flex items-center gap-4">
                 {detailPerson.photoUrl ? (
                   <img
-                    src={detailPerson.photoUrl}
+                    src={normalizeImageUrl(detailPerson.photoUrl)}
                     alt={detailPerson.firstName}
+                    onError={(e) => {
+                      const m = String(detailPerson.photoUrl || '').match(/([a-zA-Z0-9_-]{25,})/);
+                      if (m && !e.target.src.includes('thumbnail')) {
+                        e.target.src = `https://drive.google.com/thumbnail?id=${m[1]}&sz=w600`;
+                      }
+                    }}
                     className="w-16 h-16 rounded-xl object-cover border border-amber-400/50"
                   />
                 ) : (

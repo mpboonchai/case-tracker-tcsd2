@@ -193,5 +193,5 @@ function saveBase64ToDrive(dataUrl, fileName) {
   var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return 'https://drive.google.com/uc?export=view&id=' + file.getId();
+  return 'https://lh3.googleusercontent.com/d/' + file.getId();
 }
