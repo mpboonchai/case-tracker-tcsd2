@@ -24,6 +24,7 @@ import {
   formatThaiDateFull,
   extractYear,
   extractMonth,
+  calculateAge,
   normalizeImageUrl,
   generateLineReportText,
   downloadTemplateDocument
@@ -734,8 +735,27 @@ export default function ArrestsView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-1.5">
                   <div className="text-[11px] font-bold text-amber-400">ข้อมูลผู้ต้องหา</div>
-                  <div><span className="text-slate-400">เลขบัตรประชาชน:</span> <span className="font-mono text-white">{detailWarrant.nationalId || '-'}</span></div>
-                  <div><span className="text-slate-400">วันเกิด:</span> {formatThaiDate(detailWarrant.dob) || '-'} ({detailWarrant.age || '-'} ปี)</div>
+                  <div>
+                    <span className="text-slate-400">ชื่อ - สกุล:</span>{' '}
+                    <span className="font-semibold text-white">
+                      {`${detailWarrant.prefix || ''}${detailWarrant.firstName || ''} ${detailWarrant.lastName || ''}`.trim() || '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">อายุ:</span>{' '}
+                    <span className="text-white font-semibold">
+                      {(detailWarrant.age || calculateAge(detailWarrant.dob))
+                        ? `${detailWarrant.age || calculateAge(detailWarrant.dob)} ปี`
+                        : '-'}
+                    </span>
+                    {detailWarrant.dob ? (
+                      <span className="text-slate-400 ml-1.5">(เกิด {formatThaiDate(detailWarrant.dob)})</span>
+                    ) : null}
+                  </div>
+                  <div>
+                    <span className="text-slate-400">เลขบัตรประชาชน:</span>{' '}
+                    <span className="font-mono font-semibold text-amber-200">{detailWarrant.nationalId || '-'}</span>
+                  </div>
                   <div>
                     <span className="text-slate-400">ที่อยู่:</span>{' '}
                     {[
