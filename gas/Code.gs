@@ -19,7 +19,8 @@ var DRIVE_FOLDER_ID = '1hR3GUnEhZa8PtxqofJkyDuIZb9FhylvC';
 var TAB_MAP = {
   personnel: 'ข้อมูลกำลังพล',
   cases: 'งานในความรับผิดชอบ',
-  warrants: 'การจับกุม'
+  warrants: 'การจับกุม',
+  operations: 'เคสคดี'
 };
 
 function jsonResponse(obj) {
@@ -38,7 +39,8 @@ function doGet(e) {
         success: true,
         personnel: readTabAsObjects(ss, TAB_MAP.personnel),
         cases: readTabAsObjects(ss, TAB_MAP.cases),
-        warrants: readTabAsObjects(ss, TAB_MAP.warrants)
+        warrants: readTabAsObjects(ss, TAB_MAP.warrants),
+        operations: readTabAsObjects(ss, TAB_MAP.operations)
       });
     }
 
@@ -100,8 +102,15 @@ function readTabAsObjects(ss, tabName) {
 
 function writeObjectsToTab(ss, tabName, rows) {
   var sheet = ss.getSheetByName(tabName);
-  if (!sheet) throw new Error('Sheet tab not found: ' + tabName);
+  if (!sheet) {
+    sheet = ss.insertSheet(tabName);
+  }
   var lastCol = sheet.getLastColumn();
+  if (lastCol === 0 && rows && rows.length > 0) {
+    var autoHeaders = Object.keys(rows[0]);
+    sheet.getRange(1, 1, 1, autoHeaders.length).setValues([autoHeaders]);
+    lastCol = autoHeaders.length;
+  }
   if (lastCol === 0) return;
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 

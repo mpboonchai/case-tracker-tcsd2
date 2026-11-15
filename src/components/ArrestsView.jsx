@@ -791,7 +791,10 @@ export default function ArrestsView({
               )}
 
               {/* Uploaded Photos Preview (if any) */}
-              {(detailWarrant.photoArrest ||
+              {(detailWarrant.personPhotoUrl ||
+                detailWarrant.houseRegUrl ||
+                detailWarrant.naraiRegUrl ||
+                detailWarrant.photoArrest ||
                 detailWarrant.photoFront ||
                 detailWarrant.photoLeft ||
                 detailWarrant.photoRight ||
@@ -801,10 +804,13 @@ export default function ArrestsView({
                 detailWarrant.photoReport3) && (
                 <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-2">
                   <div className="text-[11px] font-bold text-amber-400">
-                    ภาพถ่ายประกอบบันทึก & ภาพรายงาน (พร้อมแทรกลงใน .docx / .pptx)
+                    ภาพข้อมูลผู้ต้องหา (ทร.14 / Narai) & ภาพถ่ายประกอบบันทึกจับกุม
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
+                      ['personPhotoUrl', 'รูปภาพผู้ต้องหา'],
+                      ['houseRegUrl', 'ทะเบียนราษฎร์ (ทร.14)'],
+                      ['naraiRegUrl', 'ฐานข้อมูล Narai'],
                       ['photoArrest', 'ขณะจับกุม'],
                       ['photoFront', 'ด้านหน้า'],
                       ['photoLeft', 'ด้านซ้าย'],
@@ -816,11 +822,18 @@ export default function ArrestsView({
                     ].map(([k, lbl]) =>
                       detailWarrant[k] ? (
                         <div key={k} className="space-y-1 text-center">
-                          <img
-                            src={detailWarrant[k]}
-                            alt={lbl}
-                            className="w-full aspect-[4/3] object-cover rounded-lg border border-blue-800/60"
-                          />
+                          <a
+                            href={detailWarrant[k]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
+                            <img
+                              src={detailWarrant[k]}
+                              alt={lbl}
+                              className="w-full aspect-[4/3] object-cover rounded-lg border border-blue-800/60 hover:border-amber-400 transition"
+                            />
+                          </a>
                           <div className="text-[10px] text-slate-400">{lbl}</div>
                         </div>
                       ) : null

@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { X, FileWarning, UserCheck, ChevronRight, ChevronLeft, Save, Link as LinkIcon } from 'lucide-react';
+import {
+  X,
+  FileWarning,
+  UserCheck,
+  ChevronRight,
+  ChevronLeft,
+  Save,
+  Link as LinkIcon,
+  Upload,
+  ClipboardPaste,
+  Trash2,
+  Image as ImageIcon
+} from 'lucide-react';
 import {
   WARRANT_OWNER_OPTIONS,
   WARRANT_STATUS_OPTIONS,
@@ -52,6 +64,96 @@ export default function WarrantModal({
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState(EMPTY_WARRANT);
   const [linksText, setLinksText] = useState('');
+  const [dragActiveField, setDragActiveField] = useState(null);
+  const [pasteNoticeField, setPasteNoticeField] = useState(null);
+
+  const readImageFileAsDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1280;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => resolve(ev.target.result);
+        img.src = ev.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const showPasteSuccess = (field) => {
+    setPasteNoticeField(field);
+    setTimeout(() => {
+      setPasteNoticeField((prev) => (prev === field ? null : prev));
+    }, 1800);
+  };
+
+  const handleImageFileForField = async (field, file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const dataUrl = await readImageFileAsDataUrl(file);
+    updateField(field, dataUrl);
+    showPasteSuccess(field);
+  };
+
+  const handlePasteEventForField = async (e, field) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type && item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          await handleImageFileForField(field, file);
+          return;
+        }
+      }
+    }
+  };
+
+  const handleClipboardButtonForField = async (field) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imgType = item.types.find((t) => t.startsWith('image/'));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const file = new File([blob], `clipboard_${Date.now()}.png`, { type: imgType });
+            await handleImageFileForField(field, file);
+            return;
+          }
+        }
+      }
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = (await navigator.clipboard.readText()).trim();
+        if (text) {
+          updateField(field, text);
+          showPasteSuccess(field);
+          return;
+        }
+      }
+      alert('ไม่พบรูปภาพหรือข้อความใน Clipboard (สามารถคลิกที่กรอบแล้วกด Ctrl+V เพื่อวางรูปได้ทันที)');
+    } catch {
+      alert('กรุณาคลิกที่กรอบช่องนี้แล้วกดปุ่ม Ctrl+V บนคีย์บอร์ดเพื่อวางรูปจาก Clipboard');
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -489,36 +591,167 @@ export default function WarrantModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className={labelClass}>ลิงก์รูปภาพผู้ต้องหา</label>
-                  <input
-                    type="text"
-                    value={formData.personPhotoUrl}
-                    onChange={(e) => updateField('personPhotoUrl', e.target.value)}
-                    placeholder="https://..."
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>ลิงก์ทะเบียนราษฎร์ (ทร.14)</label>
-                  <input
-                    type="text"
-                    value={formData.houseRegUrl}
-                    onChange={(e) => updateField('houseRegUrl', e.target.value)}
-                    placeholder="https://..."
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>ลิงก์ฐานข้อมูล Narai</label>
-                  <input
-                    type="text"
-                    value={formData.naraiRegUrl}
-                    onChange={(e) => updateField('naraiRegUrl', e.target.value)}
-                    placeholder="https://..."
-                    className={inputClass}
-                  />
-                </div>
+                {[
+                  {
+                    field: 'personPhotoUrl',
+                    label: 'รูปภาพผู้ต้องหา / ลิงก์',
+                    hint: 'ลากรูปวาง หรือ Ctrl+V วางรูปผู้ต้องหา'
+                  },
+                  {
+                    field: 'houseRegUrl',
+                    label: 'ทะเบียนราษฎร์ (ทร.14) / ลิงก์',
+                    hint: 'ลากรูปวาง หรือ Ctrl+V วางภาพ ทร.14'
+                  },
+                  {
+                    field: 'naraiRegUrl',
+                    label: 'ฐานข้อมูล Narai / ลิงก์',
+                    hint: 'ลากรูปวาง หรือ Ctrl+V วางภาพ Narai'
+                  }
+                ].map(({ field, label, hint }) => {
+                  const val = formData[field] || '';
+                  const isImagePreview =
+                    val.startsWith('data:image/') ||
+                    /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(val) ||
+                    val.includes('drive.google.com/uc') ||
+                    val.includes('lh3.googleusercontent.com');
+                  const isDragging = dragActiveField === field;
+                  const isJustPasted = pasteNoticeField === field;
+
+                  return (
+                    <div
+                      key={field}
+                      tabIndex={0}
+                      onPaste={(e) => handlePasteEventForField(e, field)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragActiveField(field);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (dragActiveField === field) setDragActiveField(null);
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDragActiveField(null);
+                        const file = e.dataTransfer?.files?.[0];
+                        if (file && file.type.startsWith('image/')) {
+                          await handleImageFileForField(field, file);
+                          return;
+                        }
+                        const textData = e.dataTransfer?.getData('text/plain');
+                        if (textData && textData.trim()) {
+                          updateField(field, textData.trim());
+                          showPasteSuccess(field);
+                        }
+                      }}
+                      className={`p-2.5 rounded-xl border transition focus:outline-none ${
+                        isDragging
+                          ? 'border-amber-400 bg-amber-500/15 ring-2 ring-amber-400/40'
+                          : 'border-blue-900/70 bg-[#070D1E]/90 focus:border-amber-400'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                        <label className="text-[11px] font-bold text-slate-200 truncate">
+                          {label}
+                        </label>
+                        {val && (
+                          <button
+                            type="button"
+                            onClick={() => updateField(field, '')}
+                            className="p-1 rounded text-red-400 hover:bg-red-950/60 transition"
+                            title="ลบรูป/ลิงก์"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Dropzone / Preview Box */}
+                      {val ? (
+                        <div className="mb-2 relative group rounded-lg overflow-hidden border border-blue-800/60 bg-slate-950 h-28 flex items-center justify-center">
+                          {isImagePreview ? (
+                            <img
+                              src={val}
+                              alt={label}
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          ) : (
+                            <a
+                              href={val}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-center text-[11px] text-cyan-400 underline break-all line-clamp-3"
+                            >
+                              {val}
+                            </a>
+                          )}
+                          {isJustPasted && (
+                            <div className="absolute inset-x-0 bottom-0 bg-emerald-600/90 text-white text-[10px] font-bold py-0.5 text-center">
+                              ✓ วางข้อมูลสำเร็จ
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mb-2 rounded-lg border border-dashed border-blue-800/80 hover:border-amber-400/70 bg-[#0A1329]/70 h-24 flex flex-col items-center justify-center p-2 text-center transition">
+                          <ImageIcon className="w-5 h-5 text-slate-400 mb-1" />
+                          <span className="text-[10px] text-slate-300 leading-tight">
+                            {hint}
+                          </span>
+                          <span className="text-[9px] text-amber-300/80 mt-0.5">
+                            (คลิกกรอบนี้แล้วกด Ctrl+V ได้เลย)
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Action Buttons: Upload File & Paste Clipboard */}
+                      <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+                        <label className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-blue-950/80 hover:bg-blue-900 text-blue-200 border border-blue-800/60 text-[10px] font-semibold cursor-pointer transition">
+                          <Upload className="w-3 h-3" />
+                          <span>เลือกรูป</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                await handleImageFileForField(field, file);
+                              }
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => handleClipboardButtonForField(field)}
+                          className="flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-[10px] font-semibold cursor-pointer transition"
+                          title="วางรูปภาพหรือลิงก์จาก Clipboard"
+                        >
+                          <ClipboardPaste className="w-3 h-3" />
+                          <span>วาง Clipboard</span>
+                        </button>
+                      </div>
+
+                      {/* Direct URL Input */}
+                      <input
+                        type="text"
+                        value={val.startsWith('data:image/') ? '' : val}
+                        onChange={(e) => updateField(field, e.target.value)}
+                        onPaste={(e) => handlePasteEventForField(e, field)}
+                        placeholder={
+                          val.startsWith('data:image/')
+                            ? '✓ แนบไฟล์รูปภาพแล้ว (หรือวางลิงก์แทน)'
+                            : 'หรือวางลิงก์ https://... ที่นี่'
+                        }
+                        className="w-full px-2 py-1 rounded bg-[#050A18] border border-blue-900/50 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

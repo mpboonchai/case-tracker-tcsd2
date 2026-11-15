@@ -37,6 +37,9 @@ export function saveGasWebhookUrl(url) {
 }
 
 const IMAGE_FIELDS = [
+  'personPhotoUrl',
+  'houseRegUrl',
+  'naraiRegUrl',
   'photoArrest',
   'photoFront',
   'photoLeft',
@@ -210,6 +213,28 @@ function toSheetRows(collection, items, personnel = []) {
         row[`ตำแหน่งคนที่ ${i}`] = p.positionDetail || p.position || '';
       }
       return row;
+    });
+  }
+  if (collection === 'operations') {
+    const findP = (id) => personnel.find((p) => p.id === id) || {};
+    return items.map((op) => {
+      const lead = findP(op.leadOfficerId);
+      const leadName = lead.firstName
+        ? `${lead.rank || lead.prefix || ''}${lead.firstName} ${lead.lastName || ''}`.trim()
+        : op.leadOfficerName || '';
+      return {
+        'ID': String(op.id || '').replace(/^op-/, ''),
+        'รหัสเคส': op.caseCode || '',
+        'ชื่อเคส': op.caseName || '',
+        'สถานะเคส': op.status || 'กำลังสืบสวน',
+        'รายละเอียดเคส': op.details || '',
+        'รายละเอียดเพิ่มเติม/การขยายผล': op.additionalNotes || '',
+        'หัวหน้าชุดรับผิดชอบ': leadName,
+        'วันที่เปิดเคส': op.startDate || '',
+        'ลิงก์โฟลเดอร์ Drive': op.driveFolderUrl || '',
+        'ลิงก์ที่เกี่ยวข้อง': op.relatedLinks || '',
+        'อัปเดตล่าสุด': op.updatedAt || '',
+      };
     });
   }
   return [];
