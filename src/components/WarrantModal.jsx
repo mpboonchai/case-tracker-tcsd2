@@ -19,6 +19,7 @@ import {
 } from '../data/initialData';
 import { calculateAge, normalizeImageUrl } from '../services/storage';
 import DateInput, { getTodayDMY } from './DateInput';
+import FileDropzone from './FileDropzone';
 
 const EMPTY_WARRANT = {
   folderId: '',
@@ -448,26 +449,25 @@ export default function WarrantModal({
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>ลิงก์ไฟล์หมายจับ (Google Drive / URL)</label>
-                  <input
-                    type="text"
-                    value={formData.warrantFileUrl}
-                    onChange={(e) => updateField('warrantFileUrl', e.target.value)}
-                    placeholder="https://drive.google.com/..."
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Folder ID (Google Drive)</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                <FileDropzone
+                  label="ไฟล์หมายจับ / ลิงก์หมายจับ (PDF หรือ รูปภาพ)"
+                  hint="ลากไฟล์หมายจับมาวาง หรือคลิกเลือกไฟล์ / Ctrl+V"
+                  value={formData.warrantFileUrl}
+                  onChange={(val) => updateField('warrantFileUrl', val)}
+                />
+                <div className="p-2.5 rounded-xl border border-blue-900/70 bg-[#070D1E]/90">
+                  <label className={labelClass}>Folder ID (Google Drive ของผู้ต้องหารายนี้)</label>
                   <input
                     type="text"
                     value={formData.folderId}
                     onChange={(e) => updateField('folderId', e.target.value)}
-                    placeholder="เช่น 1AbCdEfG..."
+                    placeholder="ระบบสร้างโฟลเดอร์ เคส > ผู้ต้องหา อัตโนมัติเมื่อบันทึก"
                     className={inputClass}
                   />
+                  <p className="text-[10px] text-slate-400 mt-1.5 leading-relaxed">
+                    ระบบจะสร้างโฟลเดอร์แยกตาม <span className="text-amber-300">ชื่อเคส &gt; เลขหมายจับ_ชื่อผู้ต้องหา</span> ให้อัตโนมัติ และเปลี่ยนชื่อโฟลเดอร์ตามหากแก้ไขเลขหมายจับ
+                  </p>
                 </div>
               </div>
 

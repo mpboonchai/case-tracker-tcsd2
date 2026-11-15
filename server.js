@@ -165,13 +165,14 @@ const registerCollectionRoutes = (routeName, filePath, idPrefix) => {
     if (!Array.isArray(req.body)) return res.status(400).json({ error: 'Invalid data format' });
     let items = req.body;
     if (routeName === 'warrants' && getGasWebhookUrl()) {
-      items = await offloadImagesToDrive(items);
+      const previousItems = readJson(filePath, []);
+      items = await offloadImagesToDrive(items, previousItems);
     }
     writeJson(filePath, items);
     const personnel = readJson(PERSONNEL_FILE, []);
     const gas = await pushCollectionToGas(routeName, items, personnel);
     lastSheetPullAt = Date.now();
-    res.json({ success: true, count: items.length, googleSheetSynced: gas.synced });
+    res.json({ success: true, count: items.length, googleSheetSynced: gas.synced, items });
   });
 };
 

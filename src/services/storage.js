@@ -391,11 +391,18 @@ const saveCollection = async (storageKey, endpoint, items) => {
   const settings = getSettings();
   if (settings.useCloudServer && settings.serverUrl) {
     try {
-      await fetch(`${settings.serverUrl.replace(/\/$/, '')}/${endpoint}/sync`, {
+      const res = await fetch(`${settings.serverUrl.replace(/\/$/, '')}/${endpoint}/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(items),
       });
+      if (res.ok) {
+        const json = await res.json().catch(() => null);
+        if (json && Array.isArray(json.items)) {
+          localStorage.setItem(storageKey, JSON.stringify(json.items));
+          return json.items;
+        }
+      }
     } catch (err) {
       console.warn(`Could not sync ${endpoint} to server:`, err.message);
     }

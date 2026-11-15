@@ -3,6 +3,7 @@ import { X, ShieldAlert, Save, Users, Check, Camera, Upload, Trash2 } from 'luci
 import { THAI_PROVINCES } from '../data/initialData';
 import { normalizeImageUrl } from '../services/storage';
 import DateInput, { getTodayDMY, toDMY } from './DateInput';
+import FileDropzone from './FileDropzone';
 
 const PHOTO_SLOTS = [
   { key: 'photoArrest', label: '1. รูปขณะจับกุม' },
@@ -90,7 +91,8 @@ export default function ArrestRecordModal({
     photoBack: '',
     photoReport1: '',
     photoReport2: '',
-    photoReport3: ''
+    photoReport3: '',
+    arrestRecordFileUrl: ''
   });
 
   useEffect(() => {
@@ -133,7 +135,8 @@ export default function ArrestRecordModal({
       photoBack: warrant.photoBack || '',
       photoReport1: warrant.photoReport1 || '',
       photoReport2: warrant.photoReport2 || '',
-      photoReport3: warrant.photoReport3 || ''
+      photoReport3: warrant.photoReport3 || '',
+      arrestRecordFileUrl: warrant.arrestRecordFileUrl || ''
     });
   }, [isOpen, warrant]);
 
@@ -691,6 +694,19 @@ export default function ArrestRecordModal({
                 );
               })}
             </div>
+          </div>
+
+          {/* Scanned Arrest Record File */}
+          <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-2.5">
+            <div className="text-xs font-bold text-amber-400">
+              8. ไฟล์บันทึกจับกุมที่สแกนแล้ว / เอกสารแนบเพิ่มเติม
+            </div>
+            <FileDropzone
+              label="อัปโหลดหรือวางลิงก์ไฟล์บันทึกจับกุมที่สแกนแล้ว (PDF / รูปภาพ)"
+              hint="ลากไฟล์บันทึกจับกุม (PDF / รูปภาพ) มาวาง หรือคลิกเลือกไฟล์ / Ctrl+V"
+              value={formData.arrestRecordFileUrl}
+              onChange={(val) => updateField('arrestRecordFileUrl', val)}
+            />
           </div>
 
           <div className="pt-2 border-t border-blue-900/50 flex items-center justify-end gap-2">

@@ -267,13 +267,19 @@ export default function App() {
       ? warrants.map(w => (w.id === id ? record : w))
       : [...warrants, record];
     setWarrants(updated);
-    await saveWarrants(updated);
+    const synced = await saveWarrants(updated);
+    if (Array.isArray(synced)) {
+      setWarrants(synced);
+    }
   };
 
   const handleDeleteWarrant = async (warrantId) => {
     const updated = warrants.filter(w => w.id !== warrantId);
     setWarrants(updated);
-    await saveWarrants(updated);
+    const synced = await saveWarrants(updated);
+    if (Array.isArray(synced)) {
+      setWarrants(synced);
+    }
   };
 
   const handleRefreshWarrants = async () => {

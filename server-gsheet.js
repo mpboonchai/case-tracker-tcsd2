@@ -71,35 +71,127 @@ export function normalizeImageUrl(url) {
   return s;
 }
 
+const FILE_FIELDS = [
+  ...IMAGE_FIELDS,
+  'warrantFileUrl',
+  'arrestRecordFileUrl',
+];
+
+function inferExtensionFromDataUrl(dataUrl) {
+  const m = String(dataUrl || '').match(/^data:([^;]+);base64,/i);
+  if (!m) return 'bin';
+  const mime = m[1].toLowerCase();
+  if (mime.includes('pdf')) return 'pdf';
+  if (mime.includes('png')) return 'png';
+  if (mime.includes('webp')) return 'webp';
+  if (mime.includes('wordprocessingml')) return 'docx';
+  if (mime.includes('msword')) return 'doc';
+  if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+  return 'bin';
+}
+
+function buildUploadFileName(copy, field, ext) {
+  const wn = String(copy.warrantNumber || '').trim().replace(/[\/\\:*?"<>|]/g, '-');
+  const suspect = `${copy.prefix || ''}${copy.firstName || ''}_${copy.lastName || ''}`.trim().replace(/\s+/g, '_');
+  const tag = [wn, suspect].filter(Boolean).join('_') || copy.id || 'warrant';
+  const labelMap = {
+    warrantFileUrl: 'หมายจับ',
+    arrestRecordFileUrl: 'บันทึกจับกุม_สแกน',
+    personPhotoUrl: 'รูปผู้ต้องหา',
+    houseRegUrl: 'ทร14',
+    naraiRegUrl: 'Narai',
+    photoArrest: 'ขณะจับกุม',
+    photoFront: 'ด้านหน้า',
+    photoLeft: 'ด้านซ้าย',
+    photoRight: 'ด้านขวา',
+    photoBack: 'ด้านหลัง',
+    photoReport1: 'รายงาน1',
+    photoReport2: 'รายงาน2',
+    photoReport3: 'รายงาน3',
+  };
+  const prefixLabel = labelMap[field] || field;
+  return `${prefixLabel}_${tag}.${ext}`;
+}
+
 /**
- * Upload any base64 data:image/... fields on a warrant to Google Drive via GAS
- * so Google Sheet cells store Drive URLs instead of >50k-char base64 strings.
+ * Ensure Case -> Suspect folder structure exists (and rename if warrantNumber/name changed),
+ * then upload any base64 data:... fields into that suspect's Drive folder.
  */
-export async function offloadImagesToDrive(items) {
+export async function offloadImagesToDrive(items, previousItems = []) {
   const gasUrl = getGasWebhookUrl();
   if (!gasUrl || !Array.isArray(items)) return items;
 
   const updated = [];
   for (const item of items) {
     const copy = { ...item };
-    for (const field of IMAGE_FIELDS) {
+    const prev = Array.isArray(previousItems) ? previousItems.find((p) => p.id === copy.id) : null;
+
+    const hasBase64Upload = FILE_FIELDS.some(
+      (f) => typeof copy[f] === 'string' && copy[f].startsWith('data:')
+    );
+    const metadataChanged =
+      !prev ||
+      (prev.warrantNumber || '') !== (copy.warrantNumber || '') ||
+      (prev.firstName || '') !== (copy.firstName || '') ||
+      (prev.lastName || '') !== (copy.lastName || '') ||
+      (prev.prefix || '') !== (copy.prefix || '') ||
+      (prev.caseName || '') !== (copy.caseName || '');
+
+    const hasIdentity = Boolean(
+      (copy.firstName || '').trim() ||
+      (copy.warrantNumber || '').trim() ||
+      (copy.caseName || '').trim()
+    );
+
+    if (hasIdentity && (!copy.folderId || hasBase64Upload || metadataChanged)) {
+      try {
+        const folderRes = await fetch(gasUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'ensureSuspectFolder',
+            caseName: copy.caseName || '',
+            warrantNumber: copy.warrantNumber || '',
+            prefix: copy.prefix || '',
+            firstName: copy.firstName || '',
+            lastName: copy.lastName || '',
+            existingFolderId: copy.folderId || '',
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+        if (folderRes.ok) {
+          const folderJson = await folderRes.json();
+          if (folderJson.success && folderJson.folderId) {
+            copy.folderId = folderJson.folderId;
+          }
+        }
+      } catch (err) {
+        console.warn('Drive folder ensure skipped:', err.message);
+      }
+    }
+
+    for (const field of FILE_FIELDS) {
       const val = copy[field];
-      if (typeof val === 'string' && val.startsWith('data:image/')) {
+      if (typeof val === 'string' && val.startsWith('data:')) {
         try {
+          const ext = inferExtensionFromDataUrl(val);
+          const fileName = buildUploadFileName(copy, field, ext);
           const res = await fetch(gasUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              action: 'uploadImage',
+              action: 'uploadFile',
               dataUrl: val,
-              fileName: `${copy.id || 'warrant'}_${field}_${Date.now()}.jpg`,
+              fileName,
+              folderId: copy.folderId || '',
             }),
-            signal: AbortSignal.timeout(15000),
+            signal: AbortSignal.timeout(25000),
           });
           if (res.ok) {
             const json = await res.json();
             if (json.success && json.url) {
-              copy[field] = normalizeImageUrl(json.url);
+              const isImageField = IMAGE_FIELDS.includes(field) || json.isImage;
+              copy[field] = isImageField ? normalizeImageUrl(json.url) : json.url;
             }
           }
         } catch (err) {
@@ -182,6 +274,7 @@ function toSheetRows(collection, items, personnel = []) {
         'อำเภอ/เขต1': w.district || '',
         'จังหวัด1': w.province || '',
         'ไฟล์หมายจับ': w.warrantFileUrl || '',
+        'ไฟล์บันทึกจับกุม': w.arrestRecordFileUrl || '',
         'สถานะ': w.status || '',
         'ไฟล์เอกสารแนบ': Array.isArray(w.relatedFiles) ? w.relatedFiles.join(', ') : '',
         'ภาพถ่ายขณะจับกุม': w.photoArrest || '',
@@ -359,6 +452,7 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         district: r['อำเภอ/เขต1'] || '',
         province: r['จังหวัด1'] || '',
         warrantFileUrl: r['ไฟล์หมายจับ'] || '',
+        arrestRecordFileUrl: r['ไฟล์บันทึกจับกุม'] || existing?.arrestRecordFileUrl || '',
         status: r['สถานะ'] || 'หลบหนี',
         relatedFiles: r['ไฟล์เอกสารแนบ']
           ? String(r['ไฟล์เอกสารแนบ']).split(',').map((s) => s.trim()).filter(Boolean)

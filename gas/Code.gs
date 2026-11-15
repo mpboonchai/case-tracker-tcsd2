@@ -57,9 +57,23 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents || '{}');
     var action = body.action || 'sync';
 
-    if (action === 'uploadImage') {
-      var url = saveBase64ToDrive(body.dataUrl, body.fileName || ('img_' + Date.now() + '.jpg'));
-      return jsonResponse({ success: true, url: url });
+    if (action === 'uploadImage' || action === 'uploadFile') {
+      var uploaded = saveBase64ToDrive(
+        body.dataUrl,
+        body.fileName || ('file_' + Date.now()),
+        body.folderId || ''
+      );
+      return jsonResponse({
+        success: true,
+        url: uploaded.url,
+        fileId: uploaded.fileId,
+        isImage: uploaded.isImage
+      });
+    }
+
+    if (action === 'ensureSuspectFolder') {
+      var result = ensureSuspectFolder(body);
+      return jsonResponse(result);
     }
 
     if (action === 'sync') {
@@ -184,14 +198,112 @@ function writeObjectsToTab(ss, tabName, rows) {
   sheet.getRange(2, 1, matrix.length, headers.length).setValues(matrix);
 }
 
-function saveBase64ToDrive(dataUrl, fileName) {
-  var match = String(dataUrl || '').match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
-  if (!match) throw new Error('Invalid image dataUrl');
+function extractDriveId(val) {
+  var s = String(val || '').trim();
+  if (!s) return '';
+  var m = s.match(/folders\/([a-zA-Z0-9_-]+)/) || s.match(/id=([a-zA-Z0-9_-]+)/) || s.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+  if (/^[a-zA-Z0-9_-]{15,}$/.test(s)) return s;
+  return '';
+}
+
+function getOrCreateSubFolder(parentFolder, name) {
+  var cleanName = String(name || '').trim();
+  if (!cleanName) return parentFolder;
+  var iter = parentFolder.getFoldersByName(cleanName);
+  if (iter.hasNext()) {
+    return iter.next();
+  }
+  var created = parentFolder.createFolder(cleanName);
+  try {
+    created.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {}
+  return created;
+}
+
+function buildSuspectFolderName(warrantNumber, prefix, firstName, lastName) {
+  var wn = String(warrantNumber || '').trim().replace(/[\/\\:*?"<>|]/g, '-');
+  var fullName = (String(prefix || '') + String(firstName || '') + (lastName ? '_' + String(lastName) : '')).trim().replace(/\s+/g, '_');
+  if (wn && fullName) return wn + '_' + fullName;
+  if (fullName) return fullName;
+  if (wn) return wn;
+  return 'ผู้ต้องหา_' + Date.now();
+}
+
+function ensureSuspectFolder(body) {
+  var rootFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  var caseName = String(body.caseName || '').trim().replace(/[\/\\:*?"<>|]/g, '-');
+  var caseFolder = caseName ? getOrCreateSubFolder(rootFolder, caseName) : rootFolder;
+  var expectedName = buildSuspectFolderName(body.warrantNumber, body.prefix, body.firstName, body.lastName);
+
+  var existingId = extractDriveId(body.existingFolderId);
+  var suspectFolder = null;
+
+  if (existingId) {
+    try {
+      var candidate = DriveApp.getFolderById(existingId);
+      if (candidate && !candidate.isTrashed()) {
+        suspectFolder = candidate;
+        if (suspectFolder.getName() !== expectedName) {
+          suspectFolder.setName(expectedName);
+        }
+        // Move to caseFolder if caseName changed and parent differs
+        var parents = suspectFolder.getParents();
+        var inCaseFolder = false;
+        while (parents.hasNext()) {
+          if (parents.next().getId() === caseFolder.getId()) {
+            inCaseFolder = true;
+            break;
+          }
+        }
+        if (!inCaseFolder) {
+          suspectFolder.moveTo(caseFolder);
+        }
+      }
+    } catch (e) {
+      suspectFolder = null;
+    }
+  }
+
+  if (!suspectFolder) {
+    suspectFolder = getOrCreateSubFolder(caseFolder, expectedName);
+  }
+
+  return {
+    success: true,
+    folderId: suspectFolder.getId(),
+    folderUrl: suspectFolder.getUrl(),
+    folderName: suspectFolder.getName(),
+    caseFolderId: caseFolder.getId(),
+    caseFolderUrl: caseFolder.getUrl()
+  };
+}
+
+function saveBase64ToDrive(dataUrl, fileName, folderId) {
+  var match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error('Invalid file dataUrl');
   var mimeType = match[1];
   var bytes = Utilities.base64Decode(match[2]);
   var blob = Utilities.newBlob(bytes, mimeType, fileName);
-  var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+
+  var targetFolderId = extractDriveId(folderId) || DRIVE_FOLDER_ID;
+  var folder;
+  try {
+    folder = DriveApp.getFolderById(targetFolderId);
+  } catch (e) {
+    folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  }
+
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  return 'https://lh3.googleusercontent.com/d/' + file.getId();
+  var isImage = mimeType.indexOf('image/') === 0;
+  var url = isImage
+    ? ('https://lh3.googleusercontent.com/d/' + file.getId())
+    : ('https://drive.google.com/file/d/' + file.getId() + '/view?usp=drivesdk');
+
+  return {
+    url: url,
+    fileId: file.getId(),
+    isImage: isImage
+  };
 }

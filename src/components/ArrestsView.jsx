@@ -16,7 +16,8 @@ import {
   ExternalLink,
   Calendar,
   MapPin,
-  Briefcase
+  Briefcase,
+  FolderOpen
 } from 'lucide-react';
 import {
   formatThaiDate,
@@ -29,6 +30,7 @@ import {
 } from '../services/storage';
 import WarrantModal from './WarrantModal';
 import ArrestRecordModal from './ArrestRecordModal';
+import { parseFileValue } from './FileDropzone';
 
 const THAI_MONTHS_SHORT = [
   'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
@@ -850,6 +852,67 @@ export default function ArrestsView({
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              )}
+
+              {/* Google Drive Folder & Uploaded Documents Section */}
+              {(detailWarrant.folderId ||
+                detailWarrant.warrantFileUrl ||
+                detailWarrant.arrestRecordFileUrl) && (
+                <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-2">
+                  <div className="text-[11px] font-bold text-cyan-400">
+                    โฟลเดอร์ Google Drive & เอกสารแนบของรายบุคคล
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {detailWarrant.folderId && (
+                      <a
+                        href={
+                          detailWarrant.folderId.startsWith('http')
+                            ? detailWarrant.folderId
+                            : `https://drive.google.com/drive/folders/${detailWarrant.folderId}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-400/40 text-indigo-200 text-xs font-semibold transition"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5 text-amber-300" />
+                        <span>เปิดโฟลเดอร์ Google Drive</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {detailWarrant.warrantFileUrl && (() => {
+                      const wf = parseFileValue(detailWarrant.warrantFileUrl);
+                      if (!wf.url) return null;
+                      return (
+                        <a
+                          href={wf.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-xs font-semibold transition"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>{wf.name || 'เปิดไฟล์หมายจับ'}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      );
+                    })()}
+                    {detailWarrant.arrestRecordFileUrl && (() => {
+                      const arf = parseFileValue(detailWarrant.arrestRecordFileUrl);
+                      if (!arf.url) return null;
+                      return (
+                        <a
+                          href={arf.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-xs font-semibold transition"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>{arf.name || 'เปิดบันทึกจับกุม (ฉบับสแกน)'}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
