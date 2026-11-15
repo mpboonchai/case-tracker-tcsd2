@@ -252,6 +252,23 @@ export default function App() {
   };
 
   const handleRefreshWarrants = async () => {
+    try {
+      const settings = getSettings();
+      if (settings.useCloudServer && settings.serverUrl) {
+        const res = await fetch(`${settings.serverUrl.replace(/\/$/, '')}/sync-from-sheet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.warrants)) setWarrants(data.warrants);
+          if (Array.isArray(data.operations)) setOperations(data.operations);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Sync from sheet failed:', err.message);
+    }
     const fresh = await getWarrants();
     setWarrants(fresh);
   };

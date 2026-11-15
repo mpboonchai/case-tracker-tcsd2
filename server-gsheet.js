@@ -259,3 +259,186 @@ export async function pushCollectionToGas(collection, items, personnel = []) {
     return { synced: false, error: err.message };
   }
 }
+
+function findPersonnelIdByName(personnel, prefix, firstName, lastName, fullNameStr) {
+  if (!Array.isArray(personnel) || personnel.length === 0) return '';
+  if (firstName) {
+    const found = personnel.find(
+      (p) =>
+        (p.firstName || '').trim() === String(firstName).trim() &&
+        (!lastName || (p.lastName || '').trim() === String(lastName).trim())
+    );
+    if (found) return found.id;
+  }
+  if (fullNameStr) {
+    const target = String(fullNameStr).replace(/\s+/g, '').trim();
+    const found = personnel.find((p) => {
+      const full = `${p.rank || p.prefix || ''}${p.firstName || ''}${p.lastName || ''}`.replace(/\s+/g, '').trim();
+      return full && (full === target || target.includes(`${p.firstName || ''}${p.lastName || ''}`));
+    });
+    if (found) return found.id;
+  }
+  return '';
+}
+
+function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
+  if (!Array.isArray(rows)) return null;
+  return rows
+    .filter((r) => (r['ชื่อผู้ต้องหา'] || '').trim() || (r['Case'] || '').trim() || (r['เลขหมายจับ'] || '').trim())
+    .map((r) => {
+      const rawId = String(r['ID'] || '').trim();
+      const existing = existingWarrants.find(
+        (w) => String(w.id || '').replace(/^war-/, '') === rawId || w.id === rawId
+      );
+      const id = existing?.id || (rawId ? (rawId.startsWith('war-') ? rawId : `war-${rawId}`) : `war-${Date.now()}`);
+
+      const arrestingOfficers = [];
+      for (let i = 1; i <= 10; i++) {
+        const fn = (r[`ชื่อคนที่ ${i}`] || '').trim();
+        const ln = (r[`นามสกุลคนที่ ${i}`] || '').trim();
+        if (fn) {
+          const pid = findPersonnelIdByName(personnel, r[`ยศคนที่ ${i}`], fn, ln);
+          if (pid) arrestingOfficers.push(pid);
+        }
+      }
+
+      const notifierId =
+        findPersonnelIdByName(personnel, r['ยศผู้แจ้ง'], r['ชื่อผู้แจ้ง'], r['นามสกุลผู้แจ้ง']) ||
+        existing?.notifierId ||
+        '';
+      const recorderId =
+        findPersonnelIdByName(personnel, r['ยศผู้บันทึก'], r['ชื่อผู้บันทึก'], r['นามสกุลผู้บันทึก']) ||
+        existing?.recorderId ||
+        '';
+
+      return {
+        ...(existing || {}),
+        id,
+        folderId: r['Folder_ID'] || '',
+        caseName: r['Case'] || '',
+        court: r['ศาล'] || '',
+        warrantNumber: r['เลขหมายจับ'] || '',
+        issueDate: r['วันที่ออกหมายจับ'] || '',
+        charge: r['ข้อหา'] || '',
+        owner: r['หน่วยงานเจ้าของหมายจับ'] || 'หมายจับภายใน',
+        gender: r['เพศ'] || 'ชาย',
+        prefix: r['คำนำหน้าชื่อผู้ต้องหา'] || '',
+        firstName: r['ชื่อผู้ต้องหา'] || '',
+        lastName: r['นามสกุลผู้ต้องหา'] || '',
+        dob: r['วันเกิด'] || '',
+        age: r['อายุ'] !== '' && r['อายุ'] !== undefined ? Number(r['อายุ']) || r['อายุ'] : '',
+        nationalId: r['เลขประจำตัวประชาชน'] || '',
+        personPhotoUrl: r['ภาพถ่ายบุคคล'] || '',
+        houseRegUrl: r['ทะเบียนราษฎร'] || '',
+        naraiRegUrl: r['ทะเบียนราษฎร_Narai'] || '',
+        houseNo: r['บ้านเลขที่'] || '',
+        moo: r['หมู่'] || '',
+        road: r['ถนน'] || '',
+        subdistrict: r['ตำบลแขวง1'] || '',
+        district: r['อำเภอ/เขต1'] || '',
+        province: r['จังหวัด1'] || '',
+        warrantFileUrl: r['ไฟล์หมายจับ'] || '',
+        status: r['สถานะ'] || 'หลบหนี',
+        relatedFiles: r['ไฟล์เอกสารแนบ']
+          ? String(r['ไฟล์เอกสารแนบ']).split(',').map((s) => s.trim()).filter(Boolean)
+          : existing?.relatedFiles || [],
+        photoArrest: r['ภาพถ่ายขณะจับกุม'] || '',
+        photoFront: r['ภาพด้านหน้า'] || '',
+        photoBack: r['ภาพด้านหลัง'] || '',
+        photoLeft: r['ภาพด้านซ้าย'] || '',
+        photoRight: r['ภาพด้านขวา'] || '',
+        relativePrefix: r['คำนำหน้าชื่อญาติ'] || '',
+        relativeFirstName: r['ชื่อญาติ'] || '',
+        relativeLastName: r['นามสกุลญาติ'] || '',
+        relativePhone: r['เบอร์โทรศัพท์'] || '',
+        relativeRelation: r['ความเกี่ยวข้อง'] || '',
+        arrestDate: r['วันที่จับกุม'] || '',
+        arrestTime: r['เวลาที่จับกุม'] || '',
+        arrestLocation: r['สถานที่จับกุม'] || '',
+        arrestSubdistrict: r['ตำบล/แขวง2'] || '',
+        arrestDistrict: r['อำเภอ/เขต2'] || '',
+        arrestProvince: r['จังหวัด2'] || '',
+        recordDate: r['วันที่บันทึก'] || '',
+        recordTime: r['เวลาที่บันทึก'] || '',
+        recordLocation: r['สถานที่ทำการบันทึก'] || '',
+        recordSubdistrict: r['ตำบล/แขวง3'] || '',
+        recordDistrict: r['อำเภอ/เขต3'] || '',
+        recordProvince: r['จังหวัด3'] || '',
+        forceMajeure: r['เหตุสุดวิสัย'] || '',
+        arrestingOfficers: arrestingOfficers.length > 0 ? arrestingOfficers : existing?.arrestingOfficers || [],
+        handoverOfficer: r['ผู้ที่นำตัวไปส่ง'] || '',
+        handoverLocation: r['สถานที่นำไปส่ง'] || '',
+        notifierId,
+        recorderId,
+        photoReport1: r['ภาพรายงาน_1'] || '',
+        photoReport2: r['ภาพรายงาน_2'] || '',
+        photoReport3: r['ภาพรายงาน_3'] || '',
+        newsLink: r['ลิงก์ข่าว'] || '',
+      };
+    });
+}
+
+function fromSheetOperations(rows, personnel = [], existingOps = []) {
+  if (!Array.isArray(rows)) return null;
+  return rows
+    .filter((r) => (r['ชื่อเคส'] || '').trim())
+    .map((r) => {
+      const rawId = String(r['ID'] || '').trim();
+      const existing = existingOps.find(
+        (o) =>
+          String(o.id || '').replace(/^op-/, '') === rawId ||
+          o.id === rawId ||
+          (o.caseName || '').trim().toLowerCase() === String(r['ชื่อเคส'] || '').trim().toLowerCase()
+      );
+      const id = existing?.id || (rawId ? (rawId.startsWith('op-') ? rawId : `op-${rawId}`) : `op-${Date.now()}`);
+      const leadOfficerId =
+        findPersonnelIdByName(personnel, '', '', '', r['หัวหน้าชุดรับผิดชอบ']) ||
+        existing?.leadOfficerId ||
+        '';
+      return {
+        ...(existing || {}),
+        id,
+        caseCode: r['รหัสเคส'] || existing?.caseCode || '',
+        caseName: r['ชื่อเคส'] || '',
+        status: r['สถานะเคส'] || 'กำลังสืบสวน',
+        details: r['รายละเอียดเคส'] || '',
+        additionalNotes: r['รายละเอียดเพิ่มเติม/การขยายผล'] || '',
+        leadOfficerId,
+        leadOfficerName: r['หัวหน้าชุดรับผิดชอบ'] || existing?.leadOfficerName || '',
+        startDate: r['วันที่เปิดเคส'] || '',
+        driveFolderUrl: r['ลิงก์โฟลเดอร์ Drive'] || '',
+        relatedLinks: r['ลิงก์ที่เกี่ยวข้อง'] || '',
+        updatedAt: r['อัปเดตล่าสุด'] || '',
+      };
+    });
+}
+
+export async function pullAllFromGas({ personnel = [], warrants = [], operations = [] } = {}) {
+  const gasUrl = getGasWebhookUrl();
+  if (!gasUrl) return { success: false };
+  try {
+    const res = await fetch(`${gasUrl}?collection=all`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return { success: false, status: res.status };
+    const data = await res.json();
+    if (!data.success) return { success: false, error: data.error };
+
+    const mappedWarrants = Array.isArray(data.warrants)
+      ? fromSheetWarrants(data.warrants, personnel, warrants)
+      : null;
+    const mappedOperations = Array.isArray(data.operations)
+      ? fromSheetOperations(data.operations, personnel, operations)
+      : null;
+
+    return {
+      success: true,
+      warrants: mappedWarrants,
+      operations: mappedOperations,
+    };
+  } catch (err) {
+    console.warn('GAS pull failed:', err.message);
+    return { success: false, error: err.message };
+  }
+}

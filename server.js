@@ -9,6 +9,7 @@ import {
   saveGasWebhookUrl,
   offloadImagesToDrive,
   pushCollectionToGas,
+  pullAllFromGas,
 } from './server-gsheet.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -213,6 +214,55 @@ app.post('/api/login', (req, res) => {
   }
 });
 
+// Pull latest Warrants & Case Operations from Google Sheet (prevents data loss across Render redeploys)
+async function syncFromGoogleSheet() {
+  try {
+    const personnel = readJson(PERSONNEL_FILE, []);
+    const localWarrants = readJson(WARRANTS_FILE, []);
+    const localOperations = readJson(OPERATIONS_FILE, []);
+    const pulled = await pullAllFromGas({
+      personnel,
+      warrants: localWarrants,
+      operations: localOperations,
+    });
+    if (!pulled.success) return { synced: false, error: pulled.error };
+
+    if (Array.isArray(pulled.warrants) && pulled.warrants.length > 0) {
+      writeJson(WARRANTS_FILE, pulled.warrants);
+    }
+    if (Array.isArray(pulled.operations) && pulled.operations.length > 0) {
+      // Merge any local operations not yet in Sheet
+      const sheetNames = new Set(
+        pulled.operations.map((o) => (o.caseName || '').trim().toLowerCase())
+      );
+      const localOnly = localOperations.filter(
+        (o) => !sheetNames.has((o.caseName || '').trim().toLowerCase())
+      );
+      writeJson(OPERATIONS_FILE, [...pulled.operations, ...localOnly]);
+    }
+    console.log(
+      `[GAS Sync] Hydrated from Google Sheet: warrants=${pulled.warrants?.length ?? 0}, operations=${pulled.operations?.length ?? 0}`
+    );
+    return {
+      synced: true,
+      warrantsCount: pulled.warrants?.length ?? 0,
+      operationsCount: pulled.operations?.length ?? 0,
+    };
+  } catch (err) {
+    console.warn('[GAS Sync] Startup pull skipped:', err.message);
+    return { synced: false, error: err.message };
+  }
+}
+
+app.post('/api/sync-from-sheet', async (_req, res) => {
+  const result = await syncFromGoogleSheet();
+  res.json({
+    ...result,
+    warrants: readJson(WARRANTS_FILE, []),
+    operations: readJson(OPERATIONS_FILE, []),
+  });
+});
+
 // Serve static frontend in production if built
 const DIST_DIR = path.join(__dirname, 'dist');
 if (fs.existsSync(DIST_DIR)) {
@@ -231,4 +281,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`  Local URL:   http://localhost:${PORT}           `);
   console.log(`  LAN URL:     http://0.0.0.0:${PORT}             `);
   console.log(`=================================================`);
+  syncFromGoogleSheet();
 });

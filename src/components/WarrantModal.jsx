@@ -189,7 +189,10 @@ export default function WarrantModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.warrantNumber.trim() || !formData.firstName.trim()) return;
+    if (!formData.firstName.trim() && !formData.warrantNumber.trim() && !formData.caseName.trim()) {
+      alert('กรุณากรอกอย่างน้อย ชื่อผู้ต้องหา หรือ ชื่อเคส หรือ เลขที่หมายจับ');
+      return;
+    }
     const linksArr = linksText
       .split(/\n|,/)
       .map(s => s.trim())
@@ -267,24 +270,22 @@ export default function WarrantModal({
             <div className="space-y-3.5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={labelClass}>ศาลที่ออกหมาย *</label>
+                  <label className={labelClass}>ศาลที่ออกหมาย</label>
                   <input
                     type="text"
-                    required
                     value={formData.court}
                     onChange={(e) => updateField('court', e.target.value)}
-                    placeholder="เช่น ศาลอาญา"
+                    placeholder="เช่น ศาลอาญา (ใส่ภายหลังได้)"
                     className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>เลขที่หมายจับ *</label>
+                  <label className={labelClass}>เลขที่หมายจับ</label>
                   <input
                     type="text"
-                    required
                     value={formData.warrantNumber}
                     onChange={(e) => updateField('warrantNumber', e.target.value)}
-                    placeholder="เช่น 1493/2569"
+                    placeholder="เช่น 1493/2569 (ใส่ภายหลังได้)"
                     className={inputClass}
                   />
                 </div>
@@ -391,13 +392,12 @@ export default function WarrantModal({
               </div>
 
               <div>
-                <label className={labelClass}>ข้อหา / ฐานความผิด *</label>
+                <label className={labelClass}>ข้อหา / ฐานความผิด</label>
                 <textarea
                   rows={3}
-                  required
                   value={formData.charge}
                   onChange={(e) => updateField('charge', e.target.value)}
-                  placeholder="ระบุข้อหาตามหมายจับ..."
+                  placeholder="ระบุข้อหาตามหมายจับ (ใส่ภายหลังได้)..."
                   className={inputClass}
                 />
               </div>
@@ -477,13 +477,12 @@ export default function WarrantModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>นามสกุล *</label>
+                  <label className={labelClass}>นามสกุล</label>
                   <input
                     type="text"
-                    required
                     value={formData.lastName}
                     onChange={(e) => updateField('lastName', e.target.value)}
-                    placeholder="นามสกุล"
+                    placeholder="นามสกุล (ใส่ภายหลังได้)"
                     className={inputClass}
                   />
                 </div>
