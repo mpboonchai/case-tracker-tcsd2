@@ -347,6 +347,8 @@ function toSheetRows(collection, items, personnel = []) {
         'ภาพรายงาน_2': w.photoReport2 || '',
         'ภาพรายงาน_3': w.photoReport3 || '',
         'ลิงก์ข่าว': w.newsLink || '',
+        'บทบาท/หน้าที่': w.role || '',
+        'หมายเหตุ': w.notes || '',
       };
       const officerIds = Array.isArray(w.arrestingOfficers) ? w.arrestingOfficers : [];
       for (let i = 1; i <= 10; i++) {
@@ -519,6 +521,8 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         photoReport2: normalizeImageUrl(r['ภาพรายงาน_2']),
         photoReport3: normalizeImageUrl(r['ภาพรายงาน_3']),
         newsLink: r['ลิงก์ข่าว'] || '',
+        role: r['บทบาท/หน้าที่'] || '',
+        notes: r['หมายเหตุ'] || '',
       };
     });
 }

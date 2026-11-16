@@ -37,6 +37,8 @@ const EMPTY_WARRANT = {
   dob: '',
   age: '',
   nationalId: '',
+  role: '',
+  notes: '',
   houseNo: '',
   moo: '',
   road: '',
@@ -563,6 +565,29 @@ export default function WarrantModal({
                     value={formData.age}
                     onChange={(e) => updateField('age', e.target.value)}
                     placeholder="คำนวณอัตโนมัติ"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>บทบาท / หน้าที่</label>
+                  <input
+                    type="text"
+                    value={formData.role || ''}
+                    onChange={(e) => updateField('role', e.target.value)}
+                    placeholder="เช่น ผู้สั่งการ, บัญชีม้าแถว 1, ผู้กดเงิน, แอดมินเพจ"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>หมายเหตุ</label>
+                  <input
+                    type="text"
+                    value={formData.notes || ''}
+                    onChange={(e) => updateField('notes', e.target.value)}
+                    placeholder="ระบุรายละเอียดเพิ่มเติม / พฤติการณ์..."
                     className={inputClass}
                   />
                 </div>

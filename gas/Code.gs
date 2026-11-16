@@ -299,6 +299,22 @@ function writeObjectsToTab(ss, tabName, rows) {
     }
   }
 
+  // Ensure 'บทบาท/หน้าที่' and 'หมายเหตุ' columns exist in 'การจับกุม'
+  if (tabName === (TAB_MAP['warrants'] || 'การจับกุม')) {
+    var neededWarrantCols = ['บทบาท/หน้าที่', 'หมายเหตุ'];
+    for (var nc = 0; nc < neededWarrantCols.length; nc++) {
+      var colTitle = neededWarrantCols[nc];
+      var hasCol = headers.some(function(h) {
+        return String(h || '').trim() === colTitle;
+      });
+      if (!hasCol) {
+        lastCol += 1;
+        sheet.getRange(1, lastCol).setValue(colTitle);
+      }
+    }
+    headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  }
+
   var isWarrantsTab = tabName === (TAB_MAP['warrants'] || 'การจับกุม');
   var existingById = {};
   var lastRow = sheet.getLastRow();

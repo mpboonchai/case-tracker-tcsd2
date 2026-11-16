@@ -127,7 +127,9 @@ export default function ArrestsView({
         (w.nationalId || '').toLowerCase().includes(q) ||
         (w.warrantNumber || '').toLowerCase().includes(q) ||
         (w.court || '').toLowerCase().includes(q) ||
-        (w.charge || '').toLowerCase().includes(q);
+        (w.charge || '').toLowerCase().includes(q) ||
+        (w.role || '').toLowerCase().includes(q) ||
+        (w.notes || '').toLowerCase().includes(q);
       if (!match) return false;
     }
 
@@ -756,6 +758,14 @@ export default function ArrestsView({
                   <div>
                     <span className="text-slate-400">เลขบัตรประชาชน:</span>{' '}
                     <span className="font-mono font-semibold text-amber-200">{detailWarrant.nationalId || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">บทบาท/หน้าที่:</span>{' '}
+                    <span className="text-cyan-300 font-semibold">{detailWarrant.role || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">หมายเหตุ:</span>{' '}
+                    <span className="text-slate-200">{detailWarrant.notes || '-'}</span>
                   </div>
                   <div>
                     <span className="text-slate-400">ที่อยู่:</span>{' '}
