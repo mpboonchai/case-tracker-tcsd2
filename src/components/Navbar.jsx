@@ -104,7 +104,7 @@ export default function Navbar({
                 }`}
               >
                 <Users className="w-3.5 h-3.5" />
-                <span>ภาพรวมหัวหน้าทีม</span>
+                <span>To-Do (หัวหน้าทีม)</span>
               </button>
             )}
 
@@ -117,7 +117,7 @@ export default function Navbar({
               }`}
             >
               <Briefcase className="w-3.5 h-3.5" />
-              <span>{isLeader ? 'งานทีม / ส่วนตัว' : 'งานของฉัน & สรุปทีม'}</span>
+              <span>{isLeader ? 'งานในความรับผิดชอบ (To-Do)' : 'งานของฉัน (To-Do)'}</span>
             </button>
 
             <button
@@ -244,7 +244,7 @@ export default function Navbar({
               }`}
             >
               <Users className="w-3 h-3" />
-              <span>หัวหน้า</span>
+              <span>To-Do หัวหน้า</span>
             </button>
           )}
           <button
@@ -256,7 +256,7 @@ export default function Navbar({
             }`}
           >
             <Briefcase className="w-3 h-3" />
-            <span>งาน</span>
+            <span>To-Do งาน</span>
           </button>
           <button
             onClick={() => setActiveView('personnel')}

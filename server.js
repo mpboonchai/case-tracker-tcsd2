@@ -120,6 +120,42 @@ app.post('/api/cases/sync', async (req, res) => {
   }
 });
 
+// Ensure every caseName referenced in warrants exists as a real row in operations ('เคสคดี')
+function materializeWarrantOperations(operations = [], warrants = []) {
+  const ops = Array.isArray(operations) ? [...operations] : [];
+  const existingKeys = new Set(
+    ops.map((o) => (o.caseName || '').trim().toLowerCase()).filter(Boolean)
+  );
+  let added = 0;
+  const now = new Date();
+  const todayDMY = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+  for (const w of warrants) {
+    const rawName = (w.caseName || '').trim();
+    if (!rawName) continue;
+    const key = rawName.toLowerCase();
+    if (existingKeys.has(key)) continue;
+
+    existingKeys.add(key);
+    added++;
+    ops.push({
+      id: `op-${Date.now()}-${added}`,
+      caseCode: `TCSD2-69-${String(ops.length + 1).padStart(3, '0')}`,
+      caseName: rawName,
+      status: 'กำลังสืบสวน',
+      details: `เคสปฏิบัติการ (${rawName})`,
+      additionalNotes: '',
+      leadOfficerId: 'per-1560300297622',
+      leadOfficerName: 'ร.ต.อ.บุญชัย ถิรภัทรไพบูลย์',
+      startDate: w.issueDate || todayDMY,
+      driveFolderUrl: rawName === 'Best Market Place' ? 'https://drive.google.com/drive/folders/1tA0FX1ZMrOne_0J3ldU-rH7BFyaYrKID' : '',
+      relatedLinks: '',
+      updatedAt: todayDMY,
+    });
+  }
+  return { ops, added };
+}
+
 // Shared CRUD registration for Personnel, Warrants & Operations
 let lastSheetPullAt = 0;
 const SHEET_PULL_TTL_MS = 10000;
@@ -171,6 +207,14 @@ const registerCollectionRoutes = (routeName, filePath, idPrefix) => {
     writeJson(filePath, items);
     const personnel = readJson(PERSONNEL_FILE, []);
     const gas = await pushCollectionToGas(routeName, items, personnel);
+    if (routeName === 'warrants') {
+      const currentOps = readJson(OPERATIONS_FILE, []);
+      const { ops, added } = materializeWarrantOperations(currentOps, items);
+      if (added > 0) {
+        writeJson(OPERATIONS_FILE, ops);
+        await pushCollectionToGas('operations', ops, personnel);
+      }
+    }
     lastSheetPullAt = Date.now();
     res.json({ success: true, count: items.length, googleSheetSynced: gas.synced, items });
   });
@@ -238,9 +282,11 @@ async function syncFromGoogleSheet() {
     });
     if (!pulled.success) return { synced: false, error: pulled.error };
 
+    let currentWarrants = localWarrants;
     if (Array.isArray(pulled.warrants) && pulled.warrants.length > 0) {
       const syncedWarrants = await offloadImagesToDrive(pulled.warrants, localWarrants);
       writeJson(WARRANTS_FILE, syncedWarrants);
+      currentWarrants = syncedWarrants;
     }
     if (Array.isArray(pulled.operations) && pulled.operations.length > 0) {
       // Merge any local operations not yet in Sheet
@@ -250,7 +296,12 @@ async function syncFromGoogleSheet() {
       const localOnly = localOperations.filter(
         (o) => !sheetNames.has((o.caseName || '').trim().toLowerCase())
       );
-      writeJson(OPERATIONS_FILE, [...pulled.operations, ...localOnly]);
+      const mergedOps = [...pulled.operations, ...localOnly];
+      const { ops: finalOps, added } = materializeWarrantOperations(mergedOps, currentWarrants);
+      writeJson(OPERATIONS_FILE, finalOps);
+      if (added > 0 || localOnly.length > 0) {
+        await pushCollectionToGas('operations', finalOps, personnel);
+      }
     }
     lastSheetPullAt = Date.now();
     console.log(

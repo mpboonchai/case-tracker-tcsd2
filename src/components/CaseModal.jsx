@@ -238,7 +238,7 @@ export default function CaseModal({
             </div>
             <div>
               <h2 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                <span>{caseData ? 'แก้ไขสำนวนงานสืบสวน' : 'สร้างงานสืบสวนคดีใหม่'}</span>
+                <span>{caseData ? 'แก้ไขงานในความรับผิดชอบ (To-Do)' : 'เพิ่มงานในความรับผิดชอบ (To-Do)'}</span>
                 {caseData?.docNumber && (
                   <span className="text-[10px] font-mono bg-blue-950 text-amber-300 px-1.5 py-0.2 rounded border border-blue-800">
                     {caseData.docNumber}
