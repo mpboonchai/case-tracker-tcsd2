@@ -286,6 +286,19 @@ function writeObjectsToTab(ss, tabName, rows) {
   if (lastCol === 0) return;
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
+  // Ensure 'ชื่อเคส' column exists in 'งานในความรับผิดชอบ' so every task links to its case
+  if (tabName === (TAB_MAP['cases'] || 'งานในความรับผิดชอบ')) {
+    var hasCaseNameCol = headers.some(function(h) {
+      return String(h || '').trim() === 'ชื่อเคส';
+    });
+    if (!hasCaseNameCol) {
+      sheet.insertColumnAfter(1);
+      sheet.getRange(1, 2).setValue('ชื่อเคส');
+      lastCol = sheet.getLastColumn();
+      headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    }
+  }
+
   var isWarrantsTab = tabName === (TAB_MAP['warrants'] || 'การจับกุม');
   var existingById = {};
   var lastRow = sheet.getLastRow();

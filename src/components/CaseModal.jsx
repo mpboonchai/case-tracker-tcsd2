@@ -25,11 +25,13 @@ export default function CaseModal({
   onSave, 
   currentUser, 
   users,
-  personnel = []
+  personnel = [],
+  operations = []
 }) {
   const [activeTab, setActiveTab] = useState('form');
   
   const [title, setTitle] = useState('');
+  const [caseName, setCaseName] = useState('');
   const [category, setCategory] = useState('งานสืบสวน');
   const [docNumber, setDocNumber] = useState('');
   const [details, setDetails] = useState('');
@@ -55,6 +57,7 @@ export default function CaseModal({
   useEffect(() => {
     if (caseData) {
       setTitle(caseData.title || '');
+      setCaseName(caseData.caseName || '');
       setCategory(caseData.category || 'งานสืบสวน');
       setDocNumber(caseData.docNumber || '');
       setDetails(caseData.details || '');
@@ -86,6 +89,7 @@ export default function CaseModal({
       setResult(caseData.result || '');
     } else {
       setTitle('');
+      setCaseName('');
       setCategory('งานสืบสวน');
       setDocNumber('');
       setDetails('');
@@ -169,6 +173,7 @@ export default function CaseModal({
       ...(caseData || {}),
       id: caseData?.id || `case-${Date.now()}`,
       title: title.trim(),
+      caseName: caseName.trim(),
       category,
       docNumber: docNumber.trim(),
       details: details.trim(),
@@ -306,6 +311,28 @@ export default function CaseModal({
                   placeholder="เช่น สืบสวนเครือข่ายหลอกลงทุน Hybrid Scam ตรวจสอบบัญชีม้า"
                   className="w-full px-3 py-2 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 transition"
                 />
+              </div>
+
+              {/* Linked Operation Case Name */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  ชื่อเคสที่เชื่อมโยง (เชื่อมกับชีท &quot;เคสคดี&quot;)
+                </label>
+                <input
+                  type="text"
+                  list="todo-operation-case-names"
+                  value={caseName}
+                  onChange={(e) => setCaseName(e.target.value)}
+                  placeholder="เลือกหรือพิมพ์ชื่อเคส เช่น Hybrid, Best Market Place..."
+                  className="w-full px-3 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-cyan-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition"
+                />
+                <datalist id="todo-operation-case-names">
+                  {Array.from(
+                    new Set(operations.map((o) => (o.caseName || '').trim()).filter(Boolean))
+                  ).map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
               </div>
 
               {/* Doc Number, Category & Priority */}

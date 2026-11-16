@@ -260,6 +260,7 @@ function toSheetRows(collection, items, personnel = []) {
   if (collection === 'cases') {
     return items.map((c) => ({
       'ID': String(c.id || '').replace(/^case-/, ''),
+      'ชื่อเคส': c.caseName || c.title || '',
       'รายละเอียด': c.details || c.title || '',
       'ประเภทคดี': c.category || 'งานสืบสวน',
       'วันที่รับมา': c.createdAt || '',

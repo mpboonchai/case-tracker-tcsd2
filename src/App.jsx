@@ -446,6 +446,7 @@ export default function App() {
         currentUser={currentUser}
         users={users}
         personnel={personnel}
+        operations={operations}
       />
 
       {/* Cloud & Backup Settings Modal */}
