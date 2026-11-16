@@ -92,7 +92,7 @@ export default function CaseOperationsView({
     relatedLinks: ''
   });
 
-  // Merge stored operations with any caseName found in warrants so no case is missed
+  // Build operations list from stored operations (do not resurrect deleted operations as virtual cards)
   const enrichedOperations = useMemo(() => {
     const mapByName = new Map();
 
@@ -100,28 +100,6 @@ export default function CaseOperationsView({
       const key = (op.caseName || '').trim().toLowerCase();
       if (key) {
         mapByName.set(key, { ...op, isVirtual: false });
-      }
-    });
-
-    // Discover any warrant caseName that doesn't have an explicit operation entry yet
-    warrants.forEach((w) => {
-      const rawName = (w.caseName || '').trim();
-      if (!rawName) return;
-      const key = rawName.toLowerCase();
-      if (!mapByName.has(key)) {
-        mapByName.set(key, {
-          id: `virtual-${key}`,
-          caseName: rawName,
-          caseCode: 'AUTO-LINK',
-          status: 'กำลังสืบสวน',
-          details: `เคสที่ตรวจพบอัตโนมัติจากฐานข้อมูลหมายจับ (${rawName})`,
-          additionalNotes: '',
-          leadOfficerId: '',
-          startDate: w.issueDate || '',
-          driveFolderUrl: '',
-          relatedLinks: '',
-          isVirtual: true
-        });
       }
     });
 

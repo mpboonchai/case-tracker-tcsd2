@@ -558,7 +558,48 @@ function fromSheetOperations(rows, personnel = [], existingOps = []) {
     });
 }
 
-export async function pullAllFromGas({ personnel = [], warrants = [], operations = [] } = {}) {
+function fromSheetCases(rows, existingCases = []) {
+  if (!Array.isArray(rows)) return null;
+  return rows
+    .filter((r) => (r['รายละเอียด'] || '').trim() || (r['ชื่อเคส'] || '').trim() || (r['ID'] || '').trim())
+    .map((r, idx) => {
+      const rawId = String(r['ID'] || '').trim();
+      const existing = existingCases.find(
+        (c) => rawId && (String(c.id || '').replace(/^case-/, '') === rawId || c.id === rawId)
+      );
+      const id = existing?.id || (rawId ? (rawId.startsWith('case-') ? rawId : `case-${rawId}`) : `case-${Date.now()}-${idx}`);
+      const statusText = String(r['สถานะ'] || '').trim();
+      const status =
+        statusText === 'เสร็จสิ้น'
+          ? 'completed'
+          : statusText === 'รอผลหน่วยงาน'
+            ? 'waiting_agency'
+            : 'in_progress';
+      const caseName = String(r['ชื่อเคส'] || '').trim();
+      const details = String(r['รายละเอียด'] || '').trim();
+      let relatedFiles = [];
+      if (r['ไฟล์ที่เกี่ยวข้อง']) {
+        relatedFiles = String(r['ไฟล์ที่เกี่ยวข้อง']).split(',').map((s) => s.trim()).filter(Boolean);
+      }
+      return {
+        ...(existing || {}),
+        id,
+        caseName: caseName || existing?.caseName || '',
+        title: existing?.title || caseName || details,
+        details: details || existing?.details || caseName,
+        category: r['ประเภทคดี'] || existing?.category || 'งานสืบสวน',
+        createdAt: r['วันที่รับมา'] || existing?.createdAt || '',
+        notes: r['สิ่งที่ดำเนินการ'] !== undefined ? r['สิ่งที่ดำเนินการ'] : (existing?.notes || ''),
+        assignedToName: r['ผู้รับผิดชอบ'] || existing?.assignedToName || '',
+        status,
+        relatedFiles: relatedFiles.length > 0 ? relatedFiles : (existing?.relatedFiles || []),
+        relatedLinks: r['ลิงก์ที่เกี่ยวข้อง'] || existing?.relatedLinks || '',
+        folderId: r['Folder ID'] || existing?.folderId || '',
+      };
+    });
+}
+
+export async function pullAllFromGas({ cases = [], personnel = [], warrants = [], operations = [] } = {}) {
   const gasUrl = getGasWebhookUrl();
   if (!gasUrl) return { success: false };
   try {
@@ -570,6 +611,9 @@ export async function pullAllFromGas({ personnel = [], warrants = [], operations
     const data = await res.json();
     if (!data.success) return { success: false, error: data.error };
 
+    const mappedCases = Array.isArray(data.cases)
+      ? fromSheetCases(data.cases, cases)
+      : null;
     const mappedWarrants = Array.isArray(data.warrants)
       ? fromSheetWarrants(data.warrants, personnel, warrants)
       : null;
@@ -579,6 +623,7 @@ export async function pullAllFromGas({ personnel = [], warrants = [], operations
 
     return {
       success: true,
+      cases: mappedCases,
       warrants: mappedWarrants,
       operations: mappedOperations,
     };

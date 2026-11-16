@@ -67,8 +67,11 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// GET all cases
-app.get('/api/cases', (req, res) => {
+// GET all cases (sync from Google Sheet if stale)
+app.get('/api/cases', async (req, res) => {
+  if (Date.now() - lastSheetPullAt > SHEET_PULL_TTL_MS) {
+    await syncFromGoogleSheet();
+  }
   const cases = readJson(CASES_FILE, []);
   res.json(cases);
 });
@@ -114,6 +117,7 @@ app.post('/api/cases/sync', async (req, res) => {
   if (Array.isArray(cases)) {
     writeJson(CASES_FILE, cases);
     const gas = await pushCollectionToGas('cases', cases);
+    lastSheetPullAt = Date.now();
     res.json({ success: true, count: cases.length, googleSheetSynced: gas.synced });
   } else {
     res.status(400).json({ error: 'Invalid data format' });
@@ -273,42 +277,34 @@ app.post('/api/login', (req, res) => {
 async function syncFromGoogleSheet() {
   try {
     const personnel = readJson(PERSONNEL_FILE, []);
+    const localCases = readJson(CASES_FILE, []);
     const localWarrants = readJson(WARRANTS_FILE, []);
     const localOperations = readJson(OPERATIONS_FILE, []);
     const pulled = await pullAllFromGas({
+      cases: localCases,
       personnel,
       warrants: localWarrants,
       operations: localOperations,
     });
     if (!pulled.success) return { synced: false, error: pulled.error };
 
-    let currentWarrants = localWarrants;
-    if (Array.isArray(pulled.warrants) && pulled.warrants.length > 0) {
+    if (Array.isArray(pulled.cases)) {
+      writeJson(CASES_FILE, pulled.cases);
+    }
+    if (Array.isArray(pulled.warrants)) {
       const syncedWarrants = await offloadImagesToDrive(pulled.warrants, localWarrants);
       writeJson(WARRANTS_FILE, syncedWarrants);
-      currentWarrants = syncedWarrants;
     }
-    if (Array.isArray(pulled.operations) && pulled.operations.length > 0) {
-      // Merge any local operations not yet in Sheet
-      const sheetNames = new Set(
-        pulled.operations.map((o) => (o.caseName || '').trim().toLowerCase())
-      );
-      const localOnly = localOperations.filter(
-        (o) => !sheetNames.has((o.caseName || '').trim().toLowerCase())
-      );
-      const mergedOps = [...pulled.operations, ...localOnly];
-      const { ops: finalOps, added } = materializeWarrantOperations(mergedOps, currentWarrants);
-      writeJson(OPERATIONS_FILE, finalOps);
-      if (added > 0 || localOnly.length > 0) {
-        await pushCollectionToGas('operations', finalOps, personnel);
-      }
+    if (Array.isArray(pulled.operations)) {
+      writeJson(OPERATIONS_FILE, pulled.operations);
     }
     lastSheetPullAt = Date.now();
     console.log(
-      `[GAS Sync] Hydrated from Google Sheet: warrants=${pulled.warrants?.length ?? 0}, operations=${pulled.operations?.length ?? 0}`
+      `[GAS Sync] Hydrated from Google Sheet: cases=${pulled.cases?.length ?? 0}, warrants=${pulled.warrants?.length ?? 0}, operations=${pulled.operations?.length ?? 0}`
     );
     return {
       synced: true,
+      casesCount: pulled.cases?.length ?? 0,
       warrantsCount: pulled.warrants?.length ?? 0,
       operationsCount: pulled.operations?.length ?? 0,
     };
