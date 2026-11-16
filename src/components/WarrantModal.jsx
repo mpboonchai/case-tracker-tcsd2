@@ -20,6 +20,7 @@ import {
 import { calculateAge, normalizeImageUrl } from '../services/storage';
 import DateInput, { getTodayDMY } from './DateInput';
 import FileDropzone from './FileDropzone';
+import CaseNameSelect from './CaseNameSelect';
 
 const EMPTY_WARRANT = {
   folderId: '',
@@ -419,25 +420,15 @@ export default function WarrantModal({
 
               <div>
                 <label className={labelClass}>ชื่อเคส (สำหรับจัดกลุ่มผู้ต้องหาและสรุปสถิติแยกเคส)</label>
-                <input
-                  type="text"
-                  list="warrant-case-names"
+                <CaseNameSelect
                   value={formData.caseName || ''}
-                  onChange={(e) => updateField('caseName', e.target.value)}
-                  placeholder="เช่น คดีหลอกลงทุนคริปโตฯ / เครือข่ายเว็บพนันออนไลน์..."
+                  onChange={(val) => updateField('caseName', val)}
+                  operations={operations}
+                  warrants={warrants}
+                  cases={cases}
+                  placeholder="คลิกเลือกเคสที่สร้างไว้ หรือพิมพ์ค้นหา/สร้างชื่อเคสใหม่..."
                   className={inputClass}
                 />
-                <datalist id="warrant-case-names">
-                  {Array.from(
-                    new Set([
-                      ...operations.map(o => (o.caseName || '').trim()).filter(Boolean),
-                      ...warrants.map(w => (w.caseName || '').trim()).filter(Boolean),
-                      ...cases.map(c => (c.title || '').trim()).filter(Boolean)
-                    ])
-                  ).map(name => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
               </div>
 
               <div>

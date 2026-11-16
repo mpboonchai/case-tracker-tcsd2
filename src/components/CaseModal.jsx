@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { AGENCY_PRESETS, TASK_CATEGORIES } from '../data/initialData';
 import DateInput, { getTodayDMY, toDMY } from './DateInput';
+import CaseNameSelect from './CaseNameSelect';
 
 export default function CaseModal({ 
   isOpen, 
@@ -318,21 +319,13 @@ export default function CaseModal({
                 <label className="block text-[11px] font-semibold text-slate-300 mb-1">
                   ชื่อเคสที่เชื่อมโยง (เชื่อมกับชีท &quot;เคสคดี&quot;)
                 </label>
-                <input
-                  type="text"
-                  list="todo-operation-case-names"
+                <CaseNameSelect
                   value={caseName}
-                  onChange={(e) => setCaseName(e.target.value)}
-                  placeholder="เลือกหรือพิมพ์ชื่อเคส เช่น Hybrid, Best Market Place..."
-                  className="w-full px-3 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-cyan-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition"
+                  onChange={setCaseName}
+                  operations={operations}
+                  placeholder="คลิกเลือกเคสจากรายการ หรือพิมพ์เพื่อค้นหา..."
+                  className="w-full pl-3 py-1.5 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs text-cyan-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition"
                 />
-                <datalist id="todo-operation-case-names">
-                  {Array.from(
-                    new Set(operations.map((o) => (o.caseName || '').trim()).filter(Boolean))
-                  ).map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
               </div>
 
               {/* Doc Number, Category & Priority */}
