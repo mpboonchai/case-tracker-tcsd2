@@ -396,7 +396,7 @@ export async function pushCollectionToGas(collection, items, personnel = []) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'sync', collection, rows }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(45000),
     });
     if (!res.ok) return { synced: false, status: res.status };
     const data = await res.json();
