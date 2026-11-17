@@ -213,8 +213,9 @@ export async function offloadImagesToDrive(items, previousItems = []) {
               dataUrl: val,
               fileName,
               folderId: copy.folderId || '',
+              previousUrl: prev?.[field] || '',
             }),
-            signal: AbortSignal.timeout(25000),
+            signal: AbortSignal.timeout(45000),
           });
           if (res.ok) {
             const json = await res.json();
@@ -483,8 +484,8 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         subdistrict: r['ตำบลแขวง1'] || '',
         district: r['อำเภอ/เขต1'] || '',
         province: r['จังหวัด1'] || '',
-        warrantFileUrl: r['ไฟล์หมายจับ'] || '',
-        arrestRecordFileUrl: r['ไฟล์บันทึกจับกุม'] || existing?.arrestRecordFileUrl || '',
+        warrantFileUrl: r['ไฟล์หมายจับ'] !== undefined ? r['ไฟล์หมายจับ'] : (existing?.warrantFileUrl || ''),
+        arrestRecordFileUrl: r['ไฟล์บันทึกจับกุม'] !== undefined ? r['ไฟล์บันทึกจับกุม'] : (existing?.arrestRecordFileUrl || ''),
         status: r['สถานะ'] || 'หลบหนี',
         relatedFiles: r['ไฟล์เอกสารแนบ']
           ? String(r['ไฟล์เอกสารแนบ']).split(',').map((s) => s.trim()).filter(Boolean)

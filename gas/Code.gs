@@ -61,7 +61,8 @@ function doPost(e) {
       var uploaded = saveBase64ToDrive(
         body.dataUrl,
         body.fileName || ('file_' + Date.now()),
-        body.folderId || ''
+        body.folderId || '',
+        body.previousUrl || ''
       );
       return jsonResponse({
         success: true,
@@ -299,9 +300,9 @@ function writeObjectsToTab(ss, tabName, rows) {
     }
   }
 
-  // Ensure 'บทบาท/หน้าที่' and 'หมายเหตุ' columns exist in 'การจับกุม'
+  // Ensure 'ไฟล์บันทึกจับกุม', 'บทบาท/หน้าที่' and 'หมายเหตุ' columns exist in 'การจับกุม'
   if (tabName === (TAB_MAP['warrants'] || 'การจับกุม')) {
-    var neededWarrantCols = ['บทบาท/หน้าที่', 'หมายเหตุ'];
+    var neededWarrantCols = ['ไฟล์บันทึกจับกุม', 'บทบาท/หน้าที่', 'หมายเหตุ'];
     for (var nc = 0; nc < neededWarrantCols.length; nc++) {
       var colTitle = neededWarrantCols[nc];
       var hasCol = headers.some(function(h) {
@@ -512,7 +513,7 @@ function ensureSuspectFolder(body) {
   };
 }
 
-function saveBase64ToDrive(dataUrl, fileName, folderId) {
+function saveBase64ToDrive(dataUrl, fileName, folderId, previousUrl) {
   var match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw new Error('Invalid file dataUrl');
   var mimeType = match[1];
@@ -526,6 +527,26 @@ function saveBase64ToDrive(dataUrl, fileName, folderId) {
   } catch (e) {
     folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   }
+
+  // Trash previous file (by previousUrl ID or matching fileName in folder) so new upload overwrites cleanly
+  var oldFileId = extractDriveId(previousUrl);
+  if (oldFileId) {
+    try {
+      var oldFile = DriveApp.getFileById(oldFileId);
+      if (oldFile && !oldFile.isTrashed()) {
+        oldFile.setTrashed(true);
+      }
+    } catch (e) {}
+  }
+  try {
+    var dupIter = folder.getFilesByName(fileName);
+    while (dupIter.hasNext()) {
+      var dup = dupIter.next();
+      if (!dup.isTrashed()) {
+        dup.setTrashed(true);
+      }
+    }
+  } catch (e) {}
 
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
