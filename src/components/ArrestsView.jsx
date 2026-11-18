@@ -1078,8 +1078,8 @@ export default function ArrestsView({
           setIsWarrantModalOpen(false);
           setEditingWarrant(null);
         }}
-        onSave={(data) => {
-          onSaveWarrant(data);
+        onSave={async (data) => {
+          await onSaveWarrant(data);
         }}
         editingWarrant={editingWarrant}
         cases={cases}
@@ -1091,11 +1091,12 @@ export default function ArrestsView({
       <ArrestRecordModal
         isOpen={!!arrestingWarrant}
         onClose={() => setArrestingWarrant(null)}
-        onSave={(updated) => {
-          onSaveWarrant(updated);
+        onSave={async (updated) => {
+          await onSaveWarrant(updated);
           setArrestingWarrant(null);
         }}
         warrant={arrestingWarrant}
+        warrants={warrants}
         personnel={personnel}
       />
     </div>

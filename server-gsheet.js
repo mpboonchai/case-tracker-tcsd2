@@ -104,7 +104,8 @@ const FILE_FIELDS = [
 ];
 
 function inferExtensionFromDataUrl(dataUrl) {
-  const m = String(dataUrl || '').match(/^data:([^;]+);base64,/i);
+  const head = String(dataUrl || '').slice(0, 120);
+  const m = head.match(/^data:([^;,]+)/i);
   if (!m) return 'bin';
   const mime = m[1].toLowerCase();
   if (mime.includes('pdf')) return 'pdf';
@@ -215,14 +216,18 @@ export async function offloadImagesToDrive(items, previousItems = []) {
               folderId: copy.folderId || '',
               previousUrl: prev?.[field] || '',
             }),
-            signal: AbortSignal.timeout(45000),
+            signal: AbortSignal.timeout(120000),
           });
           if (res.ok) {
             const json = await res.json();
             if (json.success && json.url) {
               const isImageField = IMAGE_FIELDS.includes(field) || json.isImage;
               copy[field] = isImageField ? normalizeImageUrl(json.url) : json.url;
+            } else {
+              console.warn(`GAS uploadFile returned error for ${field}:`, json.error);
             }
+          } else {
+            console.warn(`GAS uploadFile HTTP ${res.status} for ${field}`);
           }
         } catch (err) {
           console.warn(`Drive upload skipped for ${field}:`, err.message);

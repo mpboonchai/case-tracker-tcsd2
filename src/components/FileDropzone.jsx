@@ -42,10 +42,6 @@ const compressImageToDataUrl = (file) =>
 
 const readFileToDataUrl = (file) =>
   new Promise((resolve, reject) => {
-    if (file.size > 15 * 1024 * 1024) {
-      reject(new Error('ไฟล์มีขนาดใหญ่เกิน 15 MB กรุณาย่อขนาดไฟล์หรือวางเป็นลิงก์ Google Drive แทน'));
-      return;
-    }
     const reader = new FileReader();
     reader.onerror = () => reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
     reader.onload = () => resolve(reader.result);

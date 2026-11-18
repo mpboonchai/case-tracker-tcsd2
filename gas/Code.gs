@@ -380,7 +380,11 @@ function writeObjectsToTab(ss, tabName, rows) {
   var matrix = rows.map(function(obj) {
     return headers.map(function(h) {
       var v = obj[h];
-      return v === undefined || v === null ? '' : v;
+      if (v === undefined || v === null) return '';
+      var s = String(v);
+      // Prevent Google Sheets 50,000 char cell limit crash if an un-offloaded data: URL ever reaches here
+      if (s.length > 45000 && s.indexOf('data:') === 0) return '';
+      return v;
     });
   });
   for (var c = 0; c < headers.length; c++) {
@@ -514,16 +518,24 @@ function ensureSuspectFolder(body) {
 }
 
 function saveBase64ToDrive(dataUrl, fileName, folderId, previousUrl) {
-  var match = String(dataUrl || '').match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) throw new Error('Invalid file dataUrl');
-  var mimeType = match[1];
-  var bytes = Utilities.base64Decode(match[2]);
+  var str = String(dataUrl || '');
+  var commaIdx = str.indexOf(',');
+  if (commaIdx === -1 || str.indexOf('data:') !== 0) {
+    throw new Error('Invalid file dataUrl');
+  }
+  var header = str.substring(5, commaIdx);
+  var mimeType = header.split(';')[0] || 'application/octet-stream';
+  var base64Data = str.substring(commaIdx + 1).replace(/\s/g, '');
+  var bytes = Utilities.base64Decode(base64Data);
   var blob = Utilities.newBlob(bytes, mimeType, fileName);
 
   var targetFolderId = extractDriveId(folderId) || DRIVE_FOLDER_ID;
   var folder;
   try {
     folder = DriveApp.getFolderById(targetFolderId);
+    if (folder.isTrashed()) {
+      folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    }
   } catch (e) {
     folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   }

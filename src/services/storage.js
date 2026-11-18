@@ -126,9 +126,35 @@ export const getCases = async () => {
   }
 };
 
+const stripBase64ForLocalCache = (items) => {
+  if (!Array.isArray(items)) return items;
+  return items.map((item) => {
+    if (!item || typeof item !== 'object') return item;
+    const copy = { ...item };
+    for (const k of Object.keys(copy)) {
+      if (typeof copy[k] === 'string' && copy[k].startsWith('data:') && copy[k].length > 100000) {
+        copy[k] = '';
+      }
+    }
+    return copy;
+  });
+};
+
+const safeSetLocalStorage = (key, items) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(items));
+  } catch (err) {
+    try {
+      localStorage.setItem(key, JSON.stringify(stripBase64ForLocalCache(items)));
+    } catch (e2) {
+      console.warn(`LocalStorage quota exceeded for ${key}, relying on cloud sync:`, e2.message);
+    }
+  }
+};
+
 export const saveCases = async (cases) => {
-  // Always update local cache first
-  localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify(cases));
+  // Always update local cache safely first
+  safeSetLocalStorage(STORAGE_KEYS.CASES, cases);
 
   const settings = getSettings();
   if (settings.useCloudServer && settings.serverUrl) {
@@ -407,7 +433,7 @@ const getCollection = async (storageKey, endpoint, fallbackData) => {
       const res = await fetch(`${settings.serverUrl.replace(/\/$/, '')}/${endpoint}`);
       if (res.ok) {
         const data = await res.json();
-        localStorage.setItem(storageKey, JSON.stringify(data));
+        safeSetLocalStorage(storageKey, data);
         return data;
       }
     } catch (err) {
@@ -417,7 +443,7 @@ const getCollection = async (storageKey, endpoint, fallbackData) => {
   try {
     const raw = localStorage.getItem(storageKey);
     if (!raw) {
-      localStorage.setItem(storageKey, JSON.stringify(fallbackData));
+      safeSetLocalStorage(storageKey, fallbackData);
       return fallbackData;
     }
     return JSON.parse(raw);
@@ -427,7 +453,7 @@ const getCollection = async (storageKey, endpoint, fallbackData) => {
 };
 
 const saveCollection = async (storageKey, endpoint, items) => {
-  localStorage.setItem(storageKey, JSON.stringify(items));
+  safeSetLocalStorage(storageKey, items);
   const settings = getSettings();
   if (settings.useCloudServer && settings.serverUrl) {
     try {
@@ -439,7 +465,7 @@ const saveCollection = async (storageKey, endpoint, items) => {
       if (res.ok) {
         const json = await res.json().catch(() => null);
         if (json && Array.isArray(json.items)) {
-          localStorage.setItem(storageKey, JSON.stringify(json.items));
+          safeSetLocalStorage(storageKey, json.items);
           return json.items;
         }
       }

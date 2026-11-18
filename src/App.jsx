@@ -258,19 +258,28 @@ export default function App() {
     await savePersonnel(updated);
   };
 
-  // Warrants & Arrests handlers — new warrants append to the end of the list
-  const handleSaveWarrant = async (warrantData) => {
-    const id = warrantData.id || `war-${Date.now()}`;
-    const record = { ...warrantData, id };
-    const exists = warrants.some(w => w.id === id);
-    const updated = exists
-      ? warrants.map(w => (w.id === id ? record : w))
-      : [...warrants, record];
+  // Warrants & Arrests handlers — supports saving a single warrant or a batch array of warrants (multi-suspect arrest)
+  const handleSaveWarrant = async (warrantDataOrList) => {
+    const incomingList = Array.isArray(warrantDataOrList)
+      ? warrantDataOrList
+      : [warrantDataOrList];
+    const normalized = incomingList.map((w, idx) => ({
+      ...w,
+      id: w.id || `war-${Date.now()}-${idx}`
+    }));
+    const byId = new Map(normalized.map((w) => [w.id, w]));
+    const updated = warrants.map((w) => (byId.has(w.id) ? { ...w, ...byId.get(w.id) } : w));
+    for (const item of normalized) {
+      if (!warrants.some((w) => w.id === item.id)) {
+        updated.push(item);
+      }
+    }
     setWarrants(updated);
     const synced = await saveWarrants(updated);
     if (Array.isArray(synced)) {
       setWarrants(synced);
     }
+    return synced;
   };
 
   const handleDeleteWarrant = async (warrantId) => {

@@ -72,6 +72,7 @@ export default function WarrantModal({
   const [dragActiveField, setDragActiveField] = useState(null);
   const [pasteNoticeField, setPasteNoticeField] = useState(null);
   const [savedNextNotice, setSavedNextNotice] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const readImageFileAsDataUrl = (file) =>
     new Promise((resolve, reject) => {
@@ -193,8 +194,9 @@ export default function WarrantModal({
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!formData.firstName.trim() && !formData.warrantNumber.trim() && !formData.caseName.trim()) {
       alert('กรุณากรอกอย่างน้อย ชื่อผู้ต้องหา หรือ ชื่อเคส หรือ เลขที่หมายจับ');
       return;
@@ -203,12 +205,17 @@ export default function WarrantModal({
       .split(/\n|,/)
       .map(s => s.trim())
       .filter(Boolean);
-    onSave({
-      ...formData,
-      age: formData.age === '' ? '' : Number(formData.age),
-      relatedLinks: linksArr
-    });
-    onClose();
+    try {
+      setIsSaving(true);
+      await onSave({
+        ...formData,
+        age: formData.age === '' ? '' : Number(formData.age),
+        relatedLinks: linksArr
+      });
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const incrementWarrantNumber = (numStr) => {
@@ -857,10 +864,11 @@ export default function WarrantModal({
                   {editingWarrant && (
                     <button
                       type="submit"
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-md transition cursor-pointer"
+                      disabled={isSaving}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-md transition cursor-pointer disabled:opacity-60"
                     >
                       <Save className="w-3.5 h-3.5" />
-                      <span>บันทึกหมายจับ</span>
+                      <span>{isSaving ? 'กำลังอัปโหลด & บันทึก...' : 'บันทึกหมายจับ'}</span>
                     </button>
                   )}
                 </div>
@@ -869,8 +877,9 @@ export default function WarrantModal({
                   {!editingWarrant && (
                     <button
                       type="button"
+                      disabled={isSaving}
                       onClick={handleSaveAndNext}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition cursor-pointer"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md transition cursor-pointer disabled:opacity-60"
                       title="บันทึกรายนี้แล้วค้างข้อมูลเคส/ศาล/ข้อหาเดิมไว้สำหรับกรอกรายถัดไปทันที"
                     >
                       <Save className="w-3.5 h-3.5" />
@@ -879,10 +888,11 @@ export default function WarrantModal({
                   )}
                   <button
                     type="submit"
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-md transition cursor-pointer"
+                    disabled={isSaving}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold shadow-md transition cursor-pointer disabled:opacity-60"
                   >
                     <Save className="w-3.5 h-3.5" />
-                    <span>บันทึกหมายจับ</span>
+                    <span>{isSaving ? 'กำลังอัปโหลด & บันทึก...' : 'บันทึกหมายจับ'}</span>
                   </button>
                 </div>
               )}
