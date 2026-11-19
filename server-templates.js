@@ -83,6 +83,7 @@ export function buildPlaceholderMap(warrant, personnel = []) {
 
   const notifier = findPerson(warrant.notifierId) || {};
   const recorder = findPerson(warrant.recorderId) || {};
+  const controller = findPerson(warrant.controllerId || warrant.notifierId) || notifier;
 
   const arrestLocFull = buildLocationWithArea(
     warrant.arrestLocation,
@@ -98,6 +99,16 @@ export function buildPlaceholderMap(warrant, personnel = []) {
   );
 
   const relativeFull = `${warrant.relativePrefix || ''}${warrant.relativeFirstName || ''} ${warrant.relativeLastName || ''}`.trim();
+
+  // Arresting officers 1..10
+  const officerIds = Array.isArray(warrant.arrestingOfficers) ? warrant.arrestingOfficers : [];
+  const officerObjects = officerIds.map((id) => findPerson(id)).filter(Boolean);
+  const officerFullListStr = officerObjects
+    .map((p) => `${p.prefix || p.rank || ''}${p.firstName || ''} ${p.lastName || ''} ${p.positionDetail || p.position || ''}`.trim())
+    .filter(Boolean)
+    .join(', ');
+
+  const searchLocFull = (warrant.searchLocation || '').trim() || arrestLocFull;
 
   const map = {
     'เพศ': warrant.gender || '',
@@ -124,23 +135,47 @@ export function buildPlaceholderMap(warrant, personnel = []) {
     'วันที่บันทึก': formatThaiDate(warrant.recordDate || warrant.arrestDate, false),
     'เวลาที่บันทึก': warrant.recordTime || '',
     'สถานที่ทำการบันทึก': recordLocFull,
-    'เหตุสุดวิสัย': warrant.forceMajeure || 'ไม่มี',
+    'สถานที่จัดทำบันทึกย่อ': (warrant.recordLocation || '').trim() || 'กก.2 บก.ปอท.',
+    'เหตุสุดวิสัย': warrant.forceMajeure || '-',
 
-    'ชื่อเต็มญาติ': relativeFull,
-    'เบอร์โทรศัพท์': warrant.relativePhone || '',
-    'ความเกี่ยวข้อง': warrant.relativeRelation || '',
+    'ชื่อเต็มญาติ': relativeFull || '-',
+    'เบอร์โทรศัพท์': warrant.relativePhone || '-',
+    'ความเกี่ยวข้อง': warrant.relativeRelation || '-',
 
     'ผู้ที่นำตัวไปส่ง': warrant.handoverOfficer || '',
-    'สถานที่นำไปส่ง': warrant.handoverLocation || '',
+    'สถานที่นำไปส่ง': warrant.handoverLocation || 'กก.2 บก.ปอท.',
     'ที่อยู่สถานที่นำตัวไปส่ง': warrant.handoverAddress || '',
 
-    'ยศผู้แจ้ง': notifier.prefix || '',
+    // Search Warrant & Seizure fields (ข้อมูลเกี่ยวกับหมายค้นและการตรวจยึด)
+    'ศาลหมายค้น': (warrant.searchWarrantCourt || '').trim() || '........................',
+    'เลขหมายค้น': (warrant.searchWarrantNumber || '').trim() || '...............',
+    'วันที่ออกหมายค้น': warrant.searchWarrantDate ? formatThaiDate(warrant.searchWarrantDate, false) : '........................',
+    'วันที่ออกหมายค้นแบบย่อ': warrant.searchWarrantDate ? formatThaiDate(warrant.searchWarrantDate, true) : '........................',
+    'สถานที่ตรวจค้น': searchLocFull,
+    'จำนวนของกลาง': warrant.seizedEvidenceCount !== undefined && String(warrant.seizedEvidenceCount).trim() !== '' ? String(warrant.seizedEvidenceCount).trim() : '-',
+    'จำนวนสิ่งของตรวจยึด': warrant.seizedInspectCount !== undefined && String(warrant.seizedInspectCount).trim() !== '' ? String(warrant.seizedInspectCount).trim() : '-',
+    'เวลาเสร็จสิ้นการตรวจค้น': (warrant.searchEndTime || '').trim() || '............',
+    'สิ่งของตรวจยึด': (warrant.seizedItemsSummary || '').trim() || '-',
+    'คำให้การ': (warrant.pleaType || '').trim() || 'ปฏิเสธ',
+    'รายชื่อชุดจับกุม': officerFullListStr || '-',
+    'ชุดจับกุมหน่วยร่วม': (warrant.jointArrestUnit || '').trim(),
+
+    // ผู้ควบคุมตัว (ใช้ในบันทึก ม.23 และ ม.22)
+    'ยศผู้ควบคุม': controller.prefix || controller.rank || '',
+    'ชื่อผู้ควบคุม': controller.firstName || '',
+    'นามสกุลผู้ควบคุม': controller.lastName || '',
+    'ตำแหน่งผู้ควบคุม': controller.positionDetail || controller.position || '',
+    'เบอร์โทรศัพท์ผู้ควบคุม': controller.phone || '',
+
+    // ผู้แจ้งการควบคุมตัว (ม.22)
+    'ยศผู้แจ้ง': notifier.prefix || notifier.rank || '',
     'ชื่อผู้แจ้ง': notifier.firstName || '',
     'นามสกุลผู้แจ้ง': notifier.lastName || '',
     'ตำแหน่งผู้แจ้ง': notifier.positionDetail || notifier.position || '',
     'เบอร์โทรศัพท์ผู้แจ้ง': notifier.phone || '',
 
-    'ยศผู้บันทึก': recorder.prefix || '',
+    // ผู้บันทึกการจับกุม
+    'ยศผู้บันทึก': recorder.prefix || recorder.rank || '',
     'ชื่อผู้บันทึก': recorder.firstName || '',
     'นามสกุลผู้บันทึก': recorder.lastName || '',
     'ตำแหน่งผู้บันทึก': recorder.positionDetail || recorder.position || '',
@@ -157,11 +192,9 @@ export function buildPlaceholderMap(warrant, personnel = []) {
     'ภาพรายงาน_3': warrant.photoReport3 ? '__IMG_SLOT_photoReport3__' : '',
   };
 
-  // Arresting officers 1..10
-  const officerIds = Array.isArray(warrant.arrestingOfficers) ? warrant.arrestingOfficers : [];
   for (let i = 1; i <= 10; i++) {
     const p = findPerson(officerIds[i - 1]) || {};
-    map[`ยศคนที่ ${i}`] = p.prefix || '';
+    map[`ยศคนที่ ${i}`] = p.prefix || p.rank || '';
     map[`ชื่อคนที่ ${i}`] = p.firstName || '';
     map[`นามสกุลคนที่ ${i}`] = p.lastName || '';
     map[`ตำแหน่งคนที่ ${i}`] = p.positionDetail || p.position || '';
@@ -345,12 +378,9 @@ async function injectDocxImages(zip, warrant, docType) {
     }
   }
 
-  // Append any uploaded photos that weren't already placed inline (e.g. 4-sided photos in บันทึกการจับกุม & all photos in ม.23)
-  if ((docType === 'sec23' || docType === 'arrest_record') && unplacedSlots.length > 0) {
-    const title =
-      docType === 'sec23'
-        ? 'ภาพถ่ายประกอบบันทึกการควบคุมตัว (ม.23)'
-        : 'ภาพถ่ายผู้ต้องหาประกอบบันทึกการจับกุม';
+  // Only append unplaced photos for sec23 if the template didn't already have inline slots
+  if (docType === 'sec23' && unplacedSlots.length > 0) {
+    const title = 'ภาพถ่ายประกอบบันทึกการควบคุมตัว (ม.23)';
     const appendixParagraphs = [
       `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`,
       `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>${title}</w:t></w:r></w:p>`,
@@ -372,6 +402,47 @@ async function injectDocxImages(zip, warrant, docType) {
   zip.file('word/document.xml', docXml);
   zip.file('word/_rels/document.xml.rels', relsXml);
   ensureContentTypeExtensions(zip, addedExts);
+}
+
+/**
+ * Clean up empty optional joint-unit paragraph and unused officer signature rows in บันทึกการจับกุม
+ */
+function cleanupArrestRecordDynamicBlocks(xml, map) {
+  return xml.replace(/<w:p\b[\s\S]*?<\/w:p>/g, (pXml) => {
+    const tMatches = [...pXml.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)];
+    if (tMatches.length === 0) return pXml;
+    const text = tMatches.map((m) => m[1]).join('');
+
+    // Remove empty {{ชุดจับกุมหน่วยร่วม}} paragraph if no joint unit specified
+    if (text.trim() === '{{ชุดจับกุมหน่วยร่วม}}' && !map['ชุดจับกุมหน่วยร่วม']) {
+      return '';
+    }
+
+    // Check officer signature rows (pairs: 1&2, 3&4, 5&6, 7&8, 9&10)
+    for (let odd = 1; odd <= 9; odd += 2) {
+      const even = odd + 1;
+      const hasOddToken =
+        text.includes(`{{ยศคนที่ ${odd}}}`) || text.includes(`{{ชื่อคนที่ ${odd}}}`);
+      const hasEvenToken =
+        text.includes(`{{ยศคนที่ ${even}}}`) || text.includes(`{{ชื่อคนที่ ${even}}}`);
+      if (!hasOddToken && !hasEvenToken) continue;
+
+      const oddFilled = Boolean(map[`ชื่อคนที่ ${odd}`]);
+      const evenFilled = Boolean(map[`ชื่อคนที่ ${even}`]);
+
+      if (!oddFilled && !evenFilled) {
+        return '';
+      }
+      if (oddFilled && !evenFilled) {
+        // Strip the right-hand signature column when only the left officer is filled
+        return pXml
+          .replace(new RegExp(`\\(ลงชื่อ\\)\\s*\\{\\{ยศคนที่ ${even}\\}\\}[.…]+ผู้จับกุม\\s*`, 'g'), '')
+          .replace(new RegExp(`\\(\\s*\\{\\{ชื่อคนที่ ${even}\\}\\}\\s*\\{\\{นามสกุลคนที่ ${even}\\}\\}\\s*\\)\\s*`, 'g'), '');
+      }
+    }
+
+    return pXml;
+  });
 }
 
 async function injectPptxImages(zip, warrant) {
@@ -459,7 +530,10 @@ export async function generateDocumentBuffer(type, warrant, personnel = []) {
 
   Object.keys(zip.files).forEach((entryName) => {
     if (xmlPattern.test(entryName)) {
-      const xml = zip.files[entryName].asText();
+      let xml = zip.files[entryName].asText();
+      if (type === 'arrest_record' && entryName === 'word/document.xml') {
+        xml = cleanupArrestRecordDynamicBlocks(xml, map);
+      }
       const updated = replacePlaceholdersInXml(xml, map, tagChar);
       zip.file(entryName, updated);
     }

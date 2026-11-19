@@ -106,9 +106,19 @@ export default function ArrestRecordModal({
     recordSubdistrict: 'จอมพล',
     recordDistrict: 'จตุจักร',
     recordProvince: 'กรุงเทพมหานคร',
-    forceMajeure: 'เนื่องจากสถานที่จับกุมไม่สะดวกในการจัดทำบันทึก จึงนำตัวมาทำบันทึกยัง กก.2 บก.ปอท.',
+    forceMajeure: '-',
+    searchWarrantCourt: '',
+    searchWarrantNumber: '',
+    searchWarrantDate: '',
+    searchLocation: '',
+    seizedEvidenceCount: '',
+    seizedInspectCount: '',
+    searchEndTime: '',
+    seizedItemsSummary: '-',
+    pleaType: 'ปฏิเสธ',
+    jointArrestUnit: '',
     handoverOfficer: '',
-    handoverLocation: '',
+    handoverLocation: 'กก.2 บก.ปอท.',
     handoverAddress: '',
     notifierId: '',
     recorderId: '',
@@ -159,11 +169,19 @@ export default function ArrestRecordModal({
       recordSubdistrict: warrant.recordSubdistrict || 'จอมพล',
       recordDistrict: warrant.recordDistrict || 'จตุจักร',
       recordProvince: warrant.recordProvince || 'กรุงเทพมหานคร',
-      forceMajeure:
-        warrant.forceMajeure ||
-        'เนื่องจากสถานที่จับกุมไม่สะดวกในการจัดทำบันทึก จึงนำตัวมาทำบันทึกยัง กก.2 บก.ปอท.',
+      forceMajeure: warrant.forceMajeure || '-',
+      searchWarrantCourt: warrant.searchWarrantCourt || '',
+      searchWarrantNumber: warrant.searchWarrantNumber || '',
+      searchWarrantDate: toDMY(warrant.searchWarrantDate) || '',
+      searchLocation: warrant.searchLocation || '',
+      seizedEvidenceCount: warrant.seizedEvidenceCount !== undefined ? String(warrant.seizedEvidenceCount) : '',
+      seizedInspectCount: warrant.seizedInspectCount !== undefined ? String(warrant.seizedInspectCount) : '',
+      searchEndTime: warrant.searchEndTime || '',
+      seizedItemsSummary: warrant.seizedItemsSummary || '-',
+      pleaType: warrant.pleaType || 'ปฏิเสธ',
+      jointArrestUnit: warrant.jointArrestUnit || '',
       handoverOfficer: warrant.handoverOfficer || '',
-      handoverLocation: warrant.handoverLocation || '',
+      handoverLocation: warrant.handoverLocation || 'กก.2 บก.ปอท.',
       handoverAddress: warrant.handoverAddress || '',
       notifierId: warrant.notifierId || '',
       recorderId: warrant.recorderId || '',
@@ -602,14 +620,144 @@ export default function ArrestRecordModal({
                 />
               </div>
             </div>
-            <div>
-              <label className={labelClass}>เหตุสุดวิสัย (ม.22 / ม.23)</label>
-              <input
-                type="text"
-                value={formData.forceMajeure}
-                onChange={(e) => updateField('forceMajeure', e.target.value)}
-                className={inputClass}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
+                <label className={labelClass}>เหตุสุดวิสัย (ม.22 / ม.23)</label>
+                <input
+                  type="text"
+                  value={formData.forceMajeure}
+                  onChange={(e) => updateField('forceMajeure', e.target.value)}
+                  placeholder="ระบุเหตุสุดวิสัย หรือใส่ - (หากไม่มี)"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>คำให้การชั้นจับกุม</label>
+                <select
+                  value={formData.pleaType}
+                  onChange={(e) => updateField('pleaType', e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="ปฏิเสธ">ให้การปฏิเสธตลอดข้อกล่าวหา</option>
+                  <option value="รับสารภาพ">ให้การรับสารภาพตลอดข้อกล่าวหา</option>
+                  <option value="ภาคเสธ">ให้การภาคเสธ</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* 2.5 Search Warrant & Seizure Information (ข้อมูลเกี่ยวกับหมายค้นและการตรวจยึด) */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-950/30 via-[#070D1E] to-[#070D1E] border border-amber-500/40 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs font-bold text-amber-400">
+                ข้อมูลหมายค้น และการตรวจค้น/ตรวจยึดของกลาง (สำหรับบันทึกการจับกุม/ตรวจค้น/ยึด & รายงาน PPT)
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const fullArrestLoc = [
+                    formData.arrestLocation,
+                    formData.arrestSubdistrict ? `ต.${formData.arrestSubdistrict}` : '',
+                    formData.arrestDistrict ? `อ.${formData.arrestDistrict}` : '',
+                    formData.arrestProvince ? `จ.${formData.arrestProvince}` : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim();
+                  updateField('searchLocation', fullArrestLoc);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-400/40 text-amber-300 text-[10px] font-semibold transition"
+              >
+                + ใช้สถานที่ตรวจค้นเดียวกับสถานที่จับกุม
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="sm:col-span-2">
+                <label className={labelClass}>ศาลที่ออกหมายค้น</label>
+                <input
+                  type="text"
+                  value={formData.searchWarrantCourt}
+                  onChange={(e) => updateField('searchWarrantCourt', e.target.value)}
+                  placeholder="เช่น ศาลจังหวัดพระนครศรีอยุธยา หรือ ศาลอาญา"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>เลขที่หมายค้น</label>
+                <input
+                  type="text"
+                  value={formData.searchWarrantNumber}
+                  onChange={(e) => updateField('searchWarrantNumber', e.target.value)}
+                  placeholder="เช่น ค.212/2569"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>วันที่ออกหมายค้น</label>
+                <DateInput
+                  value={formData.searchWarrantDate}
+                  onChange={(e) => updateField('searchWarrantDate', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="sm:col-span-3">
+                <label className={labelClass}>สถานที่ทำการตรวจค้นตามหมายค้น (หากเว้นว่างจะใช้สถานที่จับกุมอัตโนมัติ)</label>
+                <input
+                  type="text"
+                  value={formData.searchLocation}
+                  onChange={(e) => updateField('searchLocation', e.target.value)}
+                  placeholder="เช่น ห้อง 112 หอพิชาภัทร เลขที่ 136/49 หมู่ 7 ต.เชียงรากน้อย อ.บางปะอิน จ.พระนครศรีอยุธยา"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>เวลาเสร็จสิ้นตรวจค้น (น.)</label>
+                <input
+                  type="text"
+                  maxLength={5}
+                  value={formData.searchEndTime}
+                  onChange={(e) => updateField('searchEndTime', e.target.value)}
+                  placeholder="เช่น 06.55 หรือ 06:55"
+                  className={`${inputClass} font-mono`}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label className={labelClass}>1.) ของกลางในคดี (จำนวนรายการ)</label>
+                <input
+                  type="text"
+                  value={formData.seizedEvidenceCount}
+                  onChange={(e) => updateField('seizedEvidenceCount', e.target.value)}
+                  placeholder="เช่น 7 (หรือ -)"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>2.) ทรัพย์สินเพื่อตรวจสอบ (จำนวนรายการ)</label>
+                <input
+                  type="text"
+                  value={formData.seizedInspectCount}
+                  onChange={(e) => updateField('seizedInspectCount', e.target.value)}
+                  placeholder="เช่น 1 (หรือ -)"
+                  className={inputClass}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>สรุปสิ่งของตรวจยึด (แสดงในสไลด์ PPT ข้อ 5)</label>
+                <input
+                  type="text"
+                  value={formData.seizedItemsSummary}
+                  onChange={(e) => updateField('seizedItemsSummary', e.target.value)}
+                  placeholder="เช่น - หรือ โทรศัพท์มือถือ 2 เครื่อง, สมุดบัญชี 5 เล่ม"
+                  className={inputClass}
+                />
+              </div>
             </div>
           </div>
 
@@ -734,13 +882,13 @@ export default function ArrestRecordModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <div>
-                <label className={labelClass}>ผู้แจ้งการควบคุมตัว (ม.22)</label>
+                <label className={labelClass}>ผู้ควบคุมตัว / ผู้แจ้งการควบคุมตัว (ม.22 & ม.23)</label>
                 <select
                   value={formData.notifierId}
                   onChange={(e) => updateField('notifierId', e.target.value)}
                   className={inputClass}
                 >
-                  <option value="">-- เลือกเจ้าหน้าที่ --</option>
+                  <option value="">-- เลือกเจ้าหน้าที่ผู้ควบคุมตัว --</option>
                   {personnel.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.rank} {p.firstName} {p.lastName}
@@ -749,13 +897,13 @@ export default function ArrestRecordModal({
                 </select>
               </div>
               <div>
-                <label className={labelClass}>ผู้บันทึกการจับกุม</label>
+                <label className={labelClass}>ผู้บันทึก / ผู้จัดทำบันทึกการจับกุม</label>
                 <select
                   value={formData.recorderId}
                   onChange={(e) => updateField('recorderId', e.target.value)}
                   className={inputClass}
                 >
-                  <option value="">-- เลือกเจ้าหน้าที่ --</option>
+                  <option value="">-- เลือกเจ้าหน้าที่ผู้บันทึก --</option>
                   {personnel.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.rank} {p.firstName} {p.lastName}
@@ -763,6 +911,31 @@ export default function ArrestRecordModal({
                   ))}
                 </select>
               </div>
+            </div>
+
+            <div className="pt-1 space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className={labelClass}>เจ้าหน้าที่หน่วยร่วมจับกุม (ถ้ามี — จะแทรกบรรทัดชุดจับกุมร่วมในบันทึกการจับกุม & รายงาน LINE)</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateField(
+                      'jointArrestUnit',
+                      'เจ้าพนักงานตำรวจ กก.สายตรวจ บก.ปพ. นำโดย พ.ต.ต.พงศ์ปิติ ตรีนิคม สว.กก.สายตรวจ บก.ปพ., ร.ต.อ.ธนเดช ลีลาถาวรกุล รอง สว.กก.สายตรวจ บก.ปพ., จ.ส.ต.วัชรพงษ์ พุทธจร, ส.ต.อ.กมล แดงเหลือบ, ส.ต.ท.ธีรพงษ์ เนียนทะศาสตร์ ผบ.หมู่ กก.สายตรวจ บก.ปพ.'
+                    )
+                  }
+                  className="px-2 py-0.5 rounded bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/40 text-indigo-200 text-[10px] font-semibold transition"
+                >
+                  + ดึงชุด กก.สายตรวจ บก.ปพ.
+                </button>
+              </div>
+              <input
+                type="text"
+                value={formData.jointArrestUnit}
+                onChange={(e) => updateField('jointArrestUnit', e.target.value)}
+                placeholder="เช่น เจ้าพนักงานตำรวจ กก.สายตรวจ บก.ปพ. นำโดย พ.ต.ต.พงศ์ปิติ ตรีนิคม ... (เว้นว่างหากไม่มีหน่วยร่วม)"
+                className={inputClass}
+              />
             </div>
           </div>
 

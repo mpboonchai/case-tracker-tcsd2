@@ -273,6 +273,26 @@ export const formatThaiDate = (dateStr) => {
   }
 };
 
+const THAI_MONTHS_FULL = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+const THAI_MONTHS_SHORT = [
+  'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+  'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+];
+
+export const formatThaiDateBuddhist = (dateStr, short = false) => {
+  if (!dateStr) return '-';
+  const d = parseDateString(dateStr);
+  if (!d || isNaN(d.getTime())) return String(dateStr);
+  const day = d.getDate();
+  const month = short ? THAI_MONTHS_SHORT[d.getMonth()] : THAI_MONTHS_FULL[d.getMonth()];
+  const year = d.getFullYear() >= 2400 ? d.getFullYear() : d.getFullYear() + 543;
+  return `${day} ${month} ${year}`;
+};
+
 export const formatThaiDateFull = (dateStr) => {
   return formatThaiDate(dateStr);
 };
@@ -501,6 +521,7 @@ export const calculateAge = (dobStr) => {
  */
 export const generateLineReportText = (warrant, personnel = []) => {
   const fullName = `${warrant.prefix || ''}${warrant.firstName || ''} ${warrant.lastName || ''}`.trim();
+  const shortName = `${warrant.prefix || ''}${warrant.firstName || ''}ฯ`.trim();
   const ownerTag = warrant.owner === 'หมายจับภายนอก' ? 'หมายนอก' : 'หมายใน';
   const addrParts = [
     warrant.houseNo,
@@ -521,28 +542,38 @@ export const generateLineReportText = (warrant, personnel = []) => {
   const officerList = (warrant.arrestingOfficers || [])
     .map((id) => personnel.find((p) => p.id === id))
     .filter(Boolean)
-    .map((p) => `${p.prefix}${p.firstName} ${p.lastName} ${p.positionDetail || p.position}`.trim())
+    .map((p) => `${p.prefix || p.rank || ''}${p.firstName} ${p.lastName} ${p.positionDetail || p.position}`.trim())
     .join(', ');
+
+  const jointUnitSuffix = (warrant.jointArrestUnit || '').trim()
+    ? ` ร่วมกับ${warrant.jointArrestUnit.trim()}`
+    : '';
+  const arrestTimeStr = formatTimeHHMM(warrant.arrestTime) || '-';
+  const arrestDateFull = formatThaiDateBuddhist(warrant.arrestDate, false);
+  const arrestDateShort = formatThaiDateBuddhist(warrant.arrestDate, true);
+  const issueDateFull = formatThaiDateBuddhist(warrant.issueDate, false);
+  const handoverLoc = warrant.handoverLocation || 'กก.2 บก.ปอท.';
 
   return `เรียนผู้บังคับบัญชาเพื่อโปรดทราบ
 
 กก.2 บก.ปอท. ขออนุญาตรายงานผลการจับกุมผู้ต้องหาตามหมายจับ (${ownerTag}) 1 ราย ดังนี้
 
-🔵 เมื่อวันที่ ${formatThaiDateFull(warrant.arrestDate)} เวลาประมาณ ${formatTimeHHMM(warrant.arrestTime) || '-'} น.
+🔵 เมื่อวันที่ ${arrestDateFull} เวลาประมาณ ${arrestTimeStr} น.
 
 🟡 ภายใต้การอำนวยการของ พล.ต.ท.ณัฐศักดิ์ เชาวนาศัย ผบช.ก., พล.ต.ต.อธิป พงษ์ศิวาภัย รอง ผบช.ก., พล.ต.ต.ชนันนัทธ์ สารถวัลย์แพศย์ ผบก.ปอท., พ.ต.อ.วัชรพันธ์ ศิริพากย์, พ.ต.อ.เนติ วงษ์กุหลาบ รอง ผบก.ปอท., ว่าที่ พ.ต.อ.นิธิ ตรีสุวรรณ ผกก.3 บก.ปอศ.รรท.ผกก.2 บก.ปอท., พ.ต.ท.สัตตเมธ ใจแก้ว, พ.ต.ท.ธนะ ว่องทรง รอง ผกก.2 บก.ปอท.
 
-เจ้าหน้าที่ตำรวจชุดจับกุม นำโดย ${officerList || '-'}
+เจ้าหน้าที่ตำรวจชุดจับกุม นำโดย ${officerList || '-'}${jointUnitSuffix}
 
-🔵 ร่วมกันจับกุมผู้ต้องหาตามหมายจับ ${fullName}${warrant.age ? ` อายุ ${warrant.age} ปี` : ''} เลขประจำตัวประชาชน ${warrant.nationalId || '-'} ที่อยู่ ${addrParts || '-'}
-ผู้ต้องหาตามหมายจับ${warrant.court || '-'} ที่ ${warrant.warrantNumber || '-'} ลงวันที่ ${formatThaiDateFull(warrant.issueDate)}
+🔵 ร่วมกันจับกุมผู้ต้องหาตามหมายจับ ${fullName}${warrant.age ? ` อายุ ${warrant.age} ปี` : ''} เลขประจำตัวประชาชน ${warrant.nationalId || '-'} ที่อยู่ ${addrParts || '-'} ผู้ต้องหาตามหมายจับ${warrant.court || '-'} ที่ ${warrant.warrantNumber || '-'} ลงวันที่ ${issueDateFull}
 
 ความผิดฐาน “${warrant.charge || '-'}”
+
+🔴 พฤติการณ์การจับกุม กล่าวคือ เจ้าพนักงานตำรวจชุดจับกุม กก.2 บก.ปอท. ได้สืบสวนติดตามตัวผู้ต้องหาตามหมายจับข้างต้น โดยได้รับแจ้งจากสายลับว่า ผู้ต้องหาได้หลบหนีมาอยู่บริเวณ${arrestArea || '-'} ต่อมา (${arrestDateShort}) เจ้าพนักงานตำรวจชุดจับกุม จึงได้วางแผนและเดินทางไปเฝ้ารอสังเกตการณ์ เมื่อถึงเวลาประมาณ ${arrestTimeStr} น. ได้พบ ${fullName} อยู่บริเวณ${arrestArea || '-'} (สถานที่จับกุม) เจ้าพนักงานตำรวจชุดจับกุมจึงแสดงตนเข้าจับกุม ต่อมาได้แสดงหมายจับดังกล่าวให้ ${shortName} ดูและอ่านให้ฟัง โดย ${shortName} รับว่าเป็นบุคคลตามหมายจับนี้จริง และไม่เคยถูกจับกุมตามหมายจับนี้มาก่อน จากนั้นจึงแจ้งให้ทราบว่าจะต้องถูกจับกุมในข้อหาดังกล่าวข้างต้นพร้อมแจ้งสิทธิตามกฎหมายให้ทราบ จากนั้นนำส่งพนักงานสอบสวน ${handoverLoc} ดำเนินการต่อไป
 
 🔵 สถานที่จับกุม
 ${arrestArea || '-'}
 
-🔴 นำตัวผู้ต้องหาส่ง ${warrant.handoverLocation || 'พนักงานสอบสวน กก.2 บก.ปอท.'} เพื่อดำเนินคดีตามกฎหมายต่อไป`;
+🔴 นำตัวผู้ต้องหาส่ง ${handoverLoc} เพื่อดำเนินคดีตามกฎหมายต่อไป`;
 };
 
 /**

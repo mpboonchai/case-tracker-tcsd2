@@ -302,7 +302,21 @@ function writeObjectsToTab(ss, tabName, rows) {
 
   // Ensure 'ไฟล์บันทึกจับกุม', 'บทบาท/หน้าที่' and 'หมายเหตุ' columns exist in 'การจับกุม'
   if (tabName === (TAB_MAP['warrants'] || 'การจับกุม')) {
-    var neededWarrantCols = ['ไฟล์บันทึกจับกุม', 'บทบาท/หน้าที่', 'หมายเหตุ'];
+    var neededWarrantCols = [
+      'ไฟล์บันทึกจับกุม',
+      'บทบาท/หน้าที่',
+      'หมายเหตุ',
+      'ศาลหมายค้น',
+      'เลขหมายค้น',
+      'วันที่ออกหมายค้น',
+      'สถานที่ตรวจค้น',
+      'จำนวนของกลาง',
+      'จำนวนสิ่งของตรวจยึด',
+      'เวลาเสร็จสิ้นการตรวจค้น',
+      'สิ่งของตรวจยึด',
+      'คำให้การ',
+      'ชุดจับกุมหน่วยร่วม'
+    ];
     for (var nc = 0; nc < neededWarrantCols.length; nc++) {
       var colTitle = neededWarrantCols[nc];
       var hasCol = headers.some(function(h) {

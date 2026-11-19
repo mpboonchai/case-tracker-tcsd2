@@ -355,6 +355,16 @@ function toSheetRows(collection, items, personnel = []) {
         'ลิงก์ข่าว': w.newsLink || '',
         'บทบาท/หน้าที่': w.role || '',
         'หมายเหตุ': w.notes || '',
+        'ศาลหมายค้น': w.searchWarrantCourt || '',
+        'เลขหมายค้น': w.searchWarrantNumber || '',
+        'วันที่ออกหมายค้น': w.searchWarrantDate || '',
+        'สถานที่ตรวจค้น': w.searchLocation || '',
+        'จำนวนของกลาง': w.seizedEvidenceCount !== undefined ? String(w.seizedEvidenceCount) : '',
+        'จำนวนสิ่งของตรวจยึด': w.seizedInspectCount !== undefined ? String(w.seizedInspectCount) : '',
+        'เวลาเสร็จสิ้นการตรวจค้น': w.searchEndTime || '',
+        'สิ่งของตรวจยึด': w.seizedItemsSummary || '',
+        'คำให้การ': w.pleaType || '',
+        'ชุดจับกุมหน่วยร่วม': w.jointArrestUnit || '',
       };
       const officerIds = Array.isArray(w.arrestingOfficers) ? w.arrestingOfficers : [];
       for (let i = 1; i <= 10; i++) {
@@ -529,6 +539,16 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         newsLink: r['ลิงก์ข่าว'] || '',
         role: r['บทบาท/หน้าที่'] || '',
         notes: r['หมายเหตุ'] || '',
+        searchWarrantCourt: r['ศาลหมายค้น'] !== undefined ? r['ศาลหมายค้น'] : (existing?.searchWarrantCourt || ''),
+        searchWarrantNumber: r['เลขหมายค้น'] !== undefined ? r['เลขหมายค้น'] : (existing?.searchWarrantNumber || ''),
+        searchWarrantDate: r['วันที่ออกหมายค้น'] !== undefined ? r['วันที่ออกหมายค้น'] : (existing?.searchWarrantDate || ''),
+        searchLocation: r['สถานที่ตรวจค้น'] !== undefined ? r['สถานที่ตรวจค้น'] : (existing?.searchLocation || ''),
+        seizedEvidenceCount: r['จำนวนของกลาง'] !== undefined ? r['จำนวนของกลาง'] : (existing?.seizedEvidenceCount || ''),
+        seizedInspectCount: r['จำนวนสิ่งของตรวจยึด'] !== undefined ? r['จำนวนสิ่งของตรวจยึด'] : (existing?.seizedInspectCount || ''),
+        searchEndTime: r['เวลาเสร็จสิ้นการตรวจค้น'] !== undefined ? formatTimeHHMM(r['เวลาเสร็จสิ้นการตรวจค้น']) || r['เวลาเสร็จสิ้นการตรวจค้น'] : (existing?.searchEndTime || ''),
+        seizedItemsSummary: r['สิ่งของตรวจยึด'] !== undefined ? r['สิ่งของตรวจยึด'] : (existing?.seizedItemsSummary || ''),
+        pleaType: r['คำให้การ'] !== undefined ? r['คำให้การ'] : (existing?.pleaType || 'ปฏิเสธ'),
+        jointArrestUnit: r['ชุดจับกุมหน่วยร่วม'] !== undefined ? r['ชุดจับกุมหน่วยร่วม'] : (existing?.jointArrestUnit || ''),
       };
     });
 }
