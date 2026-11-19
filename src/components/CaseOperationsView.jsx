@@ -1111,7 +1111,7 @@ export default function CaseOperationsView({
                             <tr key={w.id || idx} className="hover:bg-slate-800/40">
                               <td className="p-2.5 text-slate-400">{idx + 1}</td>
                               <td className="p-2.5 font-bold text-white">
-                                {w.suspectName}
+                                {w.suspectName || `${w.prefix || ''}${w.firstName || ''} ${w.lastName || ''}`.trim() || '-'}
                               </td>
                               <td className="p-2.5 font-mono text-slate-300">
                                 {w.nationalId || '-'}
