@@ -154,6 +154,7 @@ export function buildPlaceholderMap(warrant, personnel = []) {
     'สถานที่ตรวจค้น': searchLocFull,
     'จำนวนของกลาง': warrant.seizedEvidenceCount !== undefined && String(warrant.seizedEvidenceCount).trim() !== '' ? String(warrant.seizedEvidenceCount).trim() : '-',
     'จำนวนสิ่งของตรวจยึด': warrant.seizedInspectCount !== undefined && String(warrant.seizedInspectCount).trim() !== '' ? String(warrant.seizedInspectCount).trim() : '-',
+    'จำนวนสิ่งของพิสูจน์ที่มา': warrant.seizedAmloCount !== undefined && String(warrant.seizedAmloCount).trim() !== '' ? String(warrant.seizedAmloCount).trim() : '-',
     'เวลาเสร็จสิ้นการตรวจค้น': (warrant.searchEndTime || '').trim() || '............',
     'สิ่งของตรวจยึด': (warrant.seizedItemsSummary || '').trim() || '-',
     'คำให้การ': (warrant.pleaType || '').trim() || 'ปฏิเสธ',

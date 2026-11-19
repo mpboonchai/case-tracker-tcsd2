@@ -893,7 +893,8 @@ export default function ArrestsView({
               {/* Google Drive Folder & Uploaded Documents Section */}
               {(detailWarrant.folderId ||
                 detailWarrant.warrantFileUrl ||
-                detailWarrant.arrestRecordFileUrl) && (
+                detailWarrant.arrestRecordFileUrl ||
+                detailWarrant.interrogationFileUrl) && (
                 <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-2">
                   <div className="text-[11px] font-bold text-cyan-400">
                     โฟลเดอร์ Google Drive & เอกสารแนบของรายบุคคล
@@ -943,6 +944,22 @@ export default function ArrestsView({
                         >
                           <FileText className="w-3.5 h-3.5" />
                           <span>{arf.name || 'เปิดบันทึกจับกุม (ฉบับสแกน)'}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      );
+                    })()}
+                    {detailWarrant.interrogationFileUrl && (() => {
+                      const itf = parseFileValue(detailWarrant.interrogationFileUrl);
+                      if (!itf.url) return null;
+                      return (
+                        <a
+                          href={itf.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-200 text-xs font-semibold transition"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>{itf.name || 'เปิดไฟล์การซักถาม'}</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       );

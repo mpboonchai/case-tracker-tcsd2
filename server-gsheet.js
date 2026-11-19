@@ -101,6 +101,7 @@ const FILE_FIELDS = [
   ...IMAGE_FIELDS,
   'warrantFileUrl',
   'arrestRecordFileUrl',
+  'interrogationFileUrl',
 ];
 
 function inferExtensionFromDataUrl(dataUrl) {
@@ -124,6 +125,7 @@ function buildUploadFileName(copy, field, ext) {
   const labelMap = {
     warrantFileUrl: 'หมายจับ',
     arrestRecordFileUrl: 'บันทึกจับกุม_สแกน',
+    interrogationFileUrl: 'ไฟล์การซักถาม',
     personPhotoUrl: 'รูปผู้ต้องหา',
     houseRegUrl: 'ทร14',
     naraiRegUrl: 'Narai',
@@ -311,6 +313,7 @@ function toSheetRows(collection, items, personnel = []) {
         'จังหวัด1': w.province || '',
         'ไฟล์หมายจับ': w.warrantFileUrl || '',
         'ไฟล์บันทึกจับกุม': w.arrestRecordFileUrl || '',
+        'ไฟล์การซักถาม': w.interrogationFileUrl || '',
         'สถานะ': w.status || '',
         'ไฟล์เอกสารแนบ': Array.isArray(w.relatedFiles) ? w.relatedFiles.join(', ') : '',
         'ภาพถ่ายขณะจับกุม': w.photoArrest || '',
@@ -361,6 +364,7 @@ function toSheetRows(collection, items, personnel = []) {
         'สถานที่ตรวจค้น': w.searchLocation || '',
         'จำนวนของกลาง': w.seizedEvidenceCount !== undefined ? String(w.seizedEvidenceCount) : '',
         'จำนวนสิ่งของตรวจยึด': w.seizedInspectCount !== undefined ? String(w.seizedInspectCount) : '',
+        'จำนวนสิ่งของพิสูจน์ที่มา': w.seizedAmloCount !== undefined ? String(w.seizedAmloCount) : '',
         'เวลาเสร็จสิ้นการตรวจค้น': w.searchEndTime || '',
         'สิ่งของตรวจยึด': w.seizedItemsSummary || '',
         'คำให้การ': w.pleaType || '',
@@ -501,6 +505,7 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         province: r['จังหวัด1'] || '',
         warrantFileUrl: r['ไฟล์หมายจับ'] !== undefined ? r['ไฟล์หมายจับ'] : (existing?.warrantFileUrl || ''),
         arrestRecordFileUrl: r['ไฟล์บันทึกจับกุม'] !== undefined ? r['ไฟล์บันทึกจับกุม'] : (existing?.arrestRecordFileUrl || ''),
+        interrogationFileUrl: r['ไฟล์การซักถาม'] !== undefined ? r['ไฟล์การซักถาม'] : (existing?.interrogationFileUrl || ''),
         status: r['สถานะ'] || 'หลบหนี',
         relatedFiles: r['ไฟล์เอกสารแนบ']
           ? String(r['ไฟล์เอกสารแนบ']).split(',').map((s) => s.trim()).filter(Boolean)
@@ -545,6 +550,7 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         searchLocation: r['สถานที่ตรวจค้น'] !== undefined ? r['สถานที่ตรวจค้น'] : (existing?.searchLocation || ''),
         seizedEvidenceCount: r['จำนวนของกลาง'] !== undefined ? r['จำนวนของกลาง'] : (existing?.seizedEvidenceCount || ''),
         seizedInspectCount: r['จำนวนสิ่งของตรวจยึด'] !== undefined ? r['จำนวนสิ่งของตรวจยึด'] : (existing?.seizedInspectCount || ''),
+        seizedAmloCount: r['จำนวนสิ่งของพิสูจน์ที่มา'] !== undefined ? r['จำนวนสิ่งของพิสูจน์ที่มา'] : (existing?.seizedAmloCount || ''),
         searchEndTime: r['เวลาเสร็จสิ้นการตรวจค้น'] !== undefined ? formatTimeHHMM(r['เวลาเสร็จสิ้นการตรวจค้น']) || r['เวลาเสร็จสิ้นการตรวจค้น'] : (existing?.searchEndTime || ''),
         seizedItemsSummary: r['สิ่งของตรวจยึด'] !== undefined ? r['สิ่งของตรวจยึด'] : (existing?.seizedItemsSummary || ''),
         pleaType: r['คำให้การ'] !== undefined ? r['คำให้การ'] : (existing?.pleaType || 'ปฏิเสธ'),

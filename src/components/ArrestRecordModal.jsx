@@ -74,6 +74,7 @@ function extractPerSuspectFields(w) {
     relativeLastName: w?.relativeLastName || '',
     relativePhone: w?.relativePhone || '',
     relativeRelation: w?.relativeRelation || '',
+    interrogationFileUrl: w?.interrogationFileUrl || '',
   };
 }
 
@@ -113,6 +114,7 @@ export default function ArrestRecordModal({
     searchLocation: '',
     seizedEvidenceCount: '',
     seizedInspectCount: '',
+    seizedAmloCount: '',
     searchEndTime: '',
     seizedItemsSummary: '-',
     pleaType: 'ปฏิเสธ',
@@ -127,7 +129,8 @@ export default function ArrestRecordModal({
     photoReport1: '',
     photoReport2: '',
     photoReport3: '',
-    arrestRecordFileUrl: ''
+    arrestRecordFileUrl: '',
+    interrogationFileUrl: ''
   });
 
   useEffect(() => {
@@ -176,6 +179,7 @@ export default function ArrestRecordModal({
       searchLocation: warrant.searchLocation || '',
       seizedEvidenceCount: warrant.seizedEvidenceCount !== undefined ? String(warrant.seizedEvidenceCount) : '',
       seizedInspectCount: warrant.seizedInspectCount !== undefined ? String(warrant.seizedInspectCount) : '',
+      seizedAmloCount: warrant.seizedAmloCount !== undefined ? String(warrant.seizedAmloCount) : '',
       searchEndTime: warrant.searchEndTime || '',
       seizedItemsSummary: warrant.seizedItemsSummary || '-',
       pleaType: warrant.pleaType || 'ปฏิเสธ',
@@ -192,7 +196,8 @@ export default function ArrestRecordModal({
       photoReport1: warrant.photoReport1 || '',
       photoReport2: warrant.photoReport2 || '',
       photoReport3: warrant.photoReport3 || '',
-      arrestRecordFileUrl: warrant.arrestRecordFileUrl || ''
+      arrestRecordFileUrl: warrant.arrestRecordFileUrl || '',
+      interrogationFileUrl: warrant.interrogationFileUrl || ''
     });
   }, [isOpen, warrant?.id]);
 
@@ -317,11 +322,16 @@ export default function ArrestRecordModal({
         sus.id === warrant.id
           ? formData.arrestRecordFileUrl
           : formData.arrestRecordFileUrl || sus.arrestRecordFileUrl || '';
+      const nextInterrogationUrl =
+        sus.id === warrant.id
+          ? formData.interrogationFileUrl
+          : ind.interrogationFileUrl || formData.interrogationFileUrl || sus.interrogationFileUrl || '';
 
       return {
         ...sus,
         ...formData,
         arrestRecordFileUrl: nextArrestRecordUrl,
+        interrogationFileUrl: nextInterrogationUrl,
         photoArrest: ind.photoArrest || '',
         photoFront: ind.photoFront || '',
         photoLeft: ind.photoLeft || '',
@@ -748,13 +758,23 @@ export default function ArrestRecordModal({
                   className={inputClass}
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div>
+                <label className={labelClass}>3.) พิสูจน์ที่มาของทรัพย์สิน (จำนวนรายการ)</label>
+                <input
+                  type="text"
+                  value={formData.seizedAmloCount}
+                  onChange={(e) => updateField('seizedAmloCount', e.target.value)}
+                  placeholder="เช่น 7 (หรือ -)"
+                  className={inputClass}
+                />
+              </div>
+              <div>
                 <label className={labelClass}>สรุปสิ่งของตรวจยึด (แสดงในสไลด์ PPT ข้อ 5)</label>
                 <input
                   type="text"
                   value={formData.seizedItemsSummary}
                   onChange={(e) => updateField('seizedItemsSummary', e.target.value)}
-                  placeholder="เช่น - หรือ โทรศัพท์มือถือ 2 เครื่อง, สมุดบัญชี 5 เล่ม"
+                  placeholder="เช่น - หรือ โทรศัพท์มือถือ 2 เครื่อง"
                   className={inputClass}
                 />
               </div>
@@ -1251,17 +1271,25 @@ export default function ArrestRecordModal({
             </div>
           </div>
 
-          {/* 8. Scanned Arrest Record File */}
-          <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-2.5">
+          {/* 8. Scanned Arrest Record File & Interrogation File */}
+          <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-3">
             <div className="text-xs font-bold text-amber-400">
-              8. ไฟล์บันทึกจับกุมที่สแกนแล้ว / เอกสารแนบเพิ่มเติม (ไม่จำกัดขนาดไฟล์ — อัปโหลดทับไฟล์เดิมใน Google Drive อัตโนมัติ)
+              8. ไฟล์บันทึกจับกุมที่สแกนแล้ว & ไฟล์การซักถาม (ไม่จำกัดขนาดไฟล์ — อัปโหลดเข้าโฟลเดอร์ผู้ต้องหาใน Google Drive อัตโนมัติ)
             </div>
-            <FileDropzone
-              label="อัปโหลดหรือวางลิงก์ไฟล์บันทึกจับกุมที่สแกนแล้ว (PDF / รูปภาพ)"
-              hint="ลากไฟล์บันทึกจับกุม (PDF / รูปภาพ) มาวาง หรือคลิกเลือกไฟล์ / Ctrl+V"
-              value={formData.arrestRecordFileUrl}
-              onChange={(val) => updateField('arrestRecordFileUrl', val)}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FileDropzone
+                label="1. ไฟล์บันทึกจับกุมที่สแกนแล้ว (PDF / รูปภาพ)"
+                hint="ลากไฟล์บันทึกจับกุม (PDF / รูปภาพ) มาวาง หรือคลิกเลือกไฟล์ / Ctrl+V"
+                value={formData.arrestRecordFileUrl}
+                onChange={(val) => updateField('arrestRecordFileUrl', val)}
+              />
+              <FileDropzone
+                label="2. ไฟล์การซักถาม (PDF / Word / รูปภาพ)"
+                hint="ลากไฟล์การซักถาม (PDF / Word / รูปภาพ) มาวาง หรือคลิกเลือกไฟล์ / Ctrl+V"
+                value={formData.interrogationFileUrl}
+                onChange={(val) => updateField('interrogationFileUrl', val)}
+              />
+            </div>
           </div>
 
           {isSaving && (
