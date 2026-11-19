@@ -74,6 +74,15 @@ export default function App() {
   useEffect(() => {
     let lastFocusRefresh = Date.now();
     const handleWindowFocus = async () => {
+      // Do not background-refresh if user has any modal open or is actively typing
+      if (
+        document.querySelector('.fixed.inset-0') ||
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA' ||
+        document.activeElement?.tagName === 'SELECT'
+      ) {
+        return;
+      }
       if (Date.now() - lastFocusRefresh < 12000) return;
       lastFocusRefresh = Date.now();
       try {

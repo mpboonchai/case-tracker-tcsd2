@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   FileWarning,
@@ -73,6 +73,7 @@ export default function WarrantModal({
   const [pasteNoticeField, setPasteNoticeField] = useState(null);
   const [savedNextNotice, setSavedNextNotice] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const initializedKeyRef = useRef(null);
 
   const readImageFileAsDataUrl = (file) =>
     new Promise((resolve, reject) => {
@@ -163,7 +164,16 @@ export default function WarrantModal({
   };
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      initializedKeyRef.current = null;
+      return;
+    }
+    const targetKey = editingWarrant ? (editingWarrant.id || 'editing') : 'new';
+    if (initializedKeyRef.current === targetKey) {
+      return;
+    }
+    initializedKeyRef.current = targetKey;
+
     setStep(1);
     if (editingWarrant) {
       setFormData({ ...EMPTY_WARRANT, ...editingWarrant });
@@ -179,7 +189,7 @@ export default function WarrantModal({
       });
       setLinksText('');
     }
-  }, [isOpen, editingWarrant, users]);
+  }, [isOpen, editingWarrant?.id]);
 
   if (!isOpen) return null;
 

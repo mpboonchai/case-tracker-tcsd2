@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   X,
   ShieldAlert,
@@ -91,6 +91,7 @@ export default function ArrestRecordModal({
   const [perSuspectData, setPerSuspectData] = useState({});
   const [coSuspectSearch, setCoSuspectSearch] = useState('');
   const [showAllCasesSuspects, setShowAllCasesSuspects] = useState(false);
+  const initializedWarrantIdRef = useRef(null);
 
   const [formData, setFormData] = useState({
     arrestDate: '',
@@ -120,7 +121,17 @@ export default function ArrestRecordModal({
   });
 
   useEffect(() => {
-    if (!isOpen || !warrant) return;
+    if (!isOpen || !warrant) {
+      initializedWarrantIdRef.current = null;
+      return;
+    }
+
+    // Prevent re-initialization if already opened for this suspect (e.g. when user switches windows/tabs to copy text)
+    if (initializedWarrantIdRef.current === warrant.id) {
+      return;
+    }
+    initializedWarrantIdRef.current = warrant.id;
+
     const today = getTodayDMY();
     setSelectedSuspectIds([warrant.id]);
     setCoSuspectSearch('');
@@ -165,7 +176,7 @@ export default function ArrestRecordModal({
       photoReport3: warrant.photoReport3 || '',
       arrestRecordFileUrl: warrant.arrestRecordFileUrl || ''
     });
-  }, [isOpen, warrant, warrants]);
+  }, [isOpen, warrant?.id]);
 
   const primaryCaseName = (warrant?.caseName || '').trim();
 

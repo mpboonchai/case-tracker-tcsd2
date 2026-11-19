@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Save, 
@@ -54,8 +54,19 @@ export default function CaseModal({
   const [channel, setChannel] = useState('');
   const [result, setResult] = useState('');
   const [newLogNote, setNewLogNote] = useState('');
+  const initializedCaseRef = useRef(null);
 
   useEffect(() => {
+    if (!isOpen) {
+      initializedCaseRef.current = null;
+      return;
+    }
+    const targetKey = caseData ? (caseData.id || 'editing') : 'new';
+    if (initializedCaseRef.current === targetKey) {
+      return;
+    }
+    initializedCaseRef.current = targetKey;
+
     if (caseData) {
       setTitle(caseData.title || '');
       setCaseName(caseData.caseName || '');
@@ -121,7 +132,7 @@ export default function CaseModal({
     setNewLogNote('');
     setNewLinkLabel('');
     setNewLinkUrl('');
-  }, [caseData, isOpen, currentUser, users]);
+  }, [isOpen, caseData?.id]);
 
   if (!isOpen) return null;
 
