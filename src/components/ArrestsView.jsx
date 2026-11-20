@@ -182,7 +182,7 @@ export default function ArrestsView({
   const maxMonthVal = Math.max(1, ...monthlyCounts);
 
   const handleCopyLine = async (warrant) => {
-    const text = generateLineReportText(warrant, personnel);
+    const text = generateLineReportText(warrant, personnel, warrants);
     try {
       await navigator.clipboard.writeText(text);
       setCopiedLineId(warrant.id);

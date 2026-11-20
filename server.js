@@ -248,7 +248,8 @@ app.post('/api/templates/generate', async (req, res) => {
       return res.status(400).json({ error: 'Missing type or warrant payload' });
     }
     const personnel = readJson(PERSONNEL_FILE, []);
-    const { buffer, fileName, mimeType } = await generateDocumentBuffer(type, warrant, personnel);
+    const allWarrants = readJson(WARRANTS_FILE, []);
+    const { buffer, fileName, mimeType } = await generateDocumentBuffer(type, warrant, personnel, allWarrants);
     const suspectLabel = `${warrant.firstName || 'suspect'}_${warrant.warrantNumber || ''}`.replace(/[^\w\u0E00-\u0E7F.-]+/g, '_');
     const outName = `${fileName.replace(/_Template(\.\w+)$/, '')}_${suspectLabel}${path.extname(fileName)}`;
 

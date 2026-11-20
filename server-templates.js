@@ -70,16 +70,43 @@ function buildLocationWithArea(loc, sub, dist, prov) {
   return parts.filter(Boolean).join(' ').trim();
 }
 
+export function findGroupArrestees(warrant, allWarrants = []) {
+  if (!warrant) return [];
+  if (!Array.isArray(allWarrants) || allWarrants.length === 0) return [warrant];
+  const targetDate = String(warrant.arrestDate || '').trim();
+  const targetLoc = String(warrant.arrestLocation || '').trim();
+  const targetTime = String(warrant.arrestTime || '').trim();
+  if (!targetDate || !targetLoc) return [warrant];
+
+  const matched = allWarrants.filter((w) => {
+    if (!w || w.id === warrant.id) return false;
+    if (w.status !== 'จับกุมแล้ว') return false;
+    if (String(w.arrestDate || '').trim() !== targetDate) return false;
+    if (String(w.arrestLocation || '').trim() !== targetLoc) return false;
+    if (targetTime && String(w.arrestTime || '').trim() && String(w.arrestTime || '').trim() !== targetTime) {
+      return false;
+    }
+    return true;
+  });
+  return [warrant, ...matched];
+}
+
 /**
  * Build placeholder key-value map matching all {{...}} tokens in the 4 Office templates.
  */
-export function buildPlaceholderMap(warrant, personnel = []) {
+export function buildPlaceholderMap(warrant, personnel = [], allWarrants = []) {
+  const group = findGroupArrestees(warrant, allWarrants);
+  const isMulti = group.length > 1;
   const findPerson = (id) => personnel.find((p) => p.id === id) || null;
   const prefix = warrant.prefix || '';
   const firstName = warrant.firstName || '';
   const lastName = warrant.lastName || '';
   const fullName = `${prefix}${firstName} ${lastName}`.trim();
   const shortName = `${prefix}${firstName}ฯ`.trim();
+  const shortNamesAll = group
+    .map((g) => `${g.prefix || ''}${g.firstName || ''}ฯ`.trim())
+    .filter(Boolean)
+    .join(' ');
 
   const notifier = findPerson(warrant.notifierId) || {};
   const recorder = findPerson(warrant.recorderId) || {};
@@ -110,6 +137,29 @@ export function buildPlaceholderMap(warrant, personnel = []) {
 
   const searchLocFull = (warrant.searchLocation || '').trim() || arrestLocFull;
 
+  const multiArrestBlock = isMulti
+    ? '\n' +
+      group
+        .map((g, idx) => {
+          const gFull = `${g.prefix || ''}${g.firstName || ''} ${g.lastName || ''}`.trim();
+          return `${idx + 1}. ${gFull}  อายุ ${g.age || '-'} ปี เลขประจำตัวประชาชน ${g.nationalId || '-'} ที่อยู่ ${buildAddress(g) || '-'} ผู้ต้องหาตามหมายจับของ ${g.court || '-'} ที่ ${g.warrantNumber || '-'} ลงวันที่ ${formatThaiDate(g.issueDate, true)}`;
+        })
+        .join('\n')
+    : `${fullName}  อายุ ${warrant.age ? String(warrant.age) : ''} ปี เลขประจำตัวประชาชน ${warrant.nationalId || ''} ที่อยู่ ${buildAddress(warrant)}`;
+
+  const multiWarrantLine = isMulti
+    ? ''
+    : `ผู้ต้องหาตามหมายจับของ  ${warrant.court || ''} ที่ ${warrant.warrantNumber || ''} ลงวันที่ ${formatThaiDate(warrant.issueDate, true)}`;
+
+  const multiSuspectReportBlock = isMulti
+    ? group
+        .map((g, idx) => {
+          const gFull = `${g.prefix || ''}${g.firstName || ''} ${g.lastName || ''}`.trim();
+          return `${idx + 1}. ${gFull} อายุ ${g.age || '-'} ปี เลขประจำตัวประชาชน ${g.nationalId || '-'} ตามหมายจับ${g.court || '-'} ที่ ${g.warrantNumber || '-'} ลงวันที่ ${formatThaiDate(g.issueDate, false)}`;
+        })
+        .join('\n')
+    : `${fullName} อายุ ${warrant.age ? String(warrant.age) : ''} ปี เลขประจำตัวประชาชน ${warrant.nationalId || ''} ตามหมายจับ${warrant.court || ''} ที่ ${warrant.warrantNumber || ''} ลงวันที่ ${formatThaiDate(warrant.issueDate, false)}`;
+
   const map = {
     'เพศ': warrant.gender || '',
     'คำนำหน้าชื่อผู้ต้องหา': prefix,
@@ -117,6 +167,11 @@ export function buildPlaceholderMap(warrant, personnel = []) {
     'นามสกุลผู้ต้องหา': lastName,
     'ชื่อเต็มผู้ต้องหา': fullName,
     'ชื่อย่อผู้ต้องหา': shortName,
+    'รายชื่อผู้ต้องหาแบบย่อทั้งหมด': shortNamesAll || shortName,
+    'รายชื่อผู้ต้องหาพบตัว': isMulti ? shortNamesAll : fullName,
+    'รายละเอียดผู้ถูกจับกุมทั้งหมด': multiArrestBlock,
+    'รายละเอียดหมายจับผู้ถูกจับกุม': multiWarrantLine,
+    'ผู้ต้องหาในรายงาน': multiSuspectReportBlock,
     'อายุ': warrant.age ? String(warrant.age) : '',
     'เลขประจำตัวประชาชน': warrant.nationalId || '',
     'ที่อยู่ผู้ต้องหา': buildAddress(warrant),
@@ -248,11 +303,15 @@ function replacePlaceholdersInXml(xml, map, tagChar) {
       }
     }
 
-    // Replace {{key}} in each text node
+    // Replace {{key}} in each text node (converting \n into <w:br/> or <a:br/>)
     const replacedTexts = texts.map((txt) =>
       txt.replace(/\{\{([^}]*)\}\}/g, (_, rawKey) => {
         const key = rawKey.trim();
-        return key in map ? escapeXml(map[key]) : '';
+        if (!(key in map)) return '';
+        const escaped = escapeXml(map[key]);
+        if (!escaped.includes('\n')) return escaped;
+        const brTag = tagChar === 'a' ? '<a:br/>' : '<w:br/>';
+        return escaped.split('\n').join(`</${tagChar}:t>${brTag}<${tagChar}:t xml:space="preserve">`);
       })
     );
 
@@ -414,8 +473,11 @@ function cleanupArrestRecordDynamicBlocks(xml, map) {
     if (tMatches.length === 0) return pXml;
     const text = tMatches.map((m) => m[1]).join('');
 
-    // Remove empty {{ชุดจับกุมหน่วยร่วม}} paragraph if no joint unit specified
+    // Remove empty {{ชุดจับกุมหน่วยร่วม}} or {{รายละเอียดหมายจับผู้ถูกจับกุม}} paragraph if empty
     if (text.trim() === '{{ชุดจับกุมหน่วยร่วม}}' && !map['ชุดจับกุมหน่วยร่วม']) {
+      return '';
+    }
+    if (text.trim() === '{{รายละเอียดหมายจับผู้ถูกจับกุม}}' && !map['รายละเอียดหมายจับผู้ถูกจับกุม']) {
       return '';
     }
 
@@ -508,7 +570,7 @@ async function injectPptxImages(zip, warrant) {
 /**
  * Generate a filled .docx or .pptx Buffer from the default template.
  */
-export async function generateDocumentBuffer(type, warrant, personnel = []) {
+export async function generateDocumentBuffer(type, warrant, personnel = [], allWarrants = []) {
   const fileName = TEMPLATE_FILES[type];
   if (!fileName) {
     throw new Error(`Unknown template type: ${type}`);
@@ -521,7 +583,7 @@ export async function generateDocumentBuffer(type, warrant, personnel = []) {
 
   const content = fs.readFileSync(filePath);
   const zip = new PizZip(content);
-  const map = buildPlaceholderMap(warrant, personnel);
+  const map = buildPlaceholderMap(warrant, personnel, allWarrants);
   const isPpt = type === 'ppt';
   const tagChar = isPpt ? 'a' : 'w';
 

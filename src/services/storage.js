@@ -517,20 +517,55 @@ export const calculateAge = (dobStr) => {
 };
 
 /**
+ * Find all suspects arrested in the same batch (same arrestDate + arrestLocation + arrestTime)
+ */
+export const findGroupArrestees = (warrant, allWarrants = []) => {
+  if (!warrant) return [];
+  if (!Array.isArray(allWarrants) || allWarrants.length === 0) return [warrant];
+  const targetDate = String(warrant.arrestDate || '').trim();
+  const targetLoc = String(warrant.arrestLocation || '').trim();
+  const targetTime = String(warrant.arrestTime || '').trim();
+  if (!targetDate || !targetLoc) return [warrant];
+
+  const matched = allWarrants.filter((w) => {
+    if (!w || w.id === warrant.id) return false;
+    if (w.status !== 'จับกุมแล้ว') return false;
+    if (String(w.arrestDate || '').trim() !== targetDate) return false;
+    if (String(w.arrestLocation || '').trim() !== targetLoc) return false;
+    if (targetTime && String(w.arrestTime || '').trim() && String(w.arrestTime || '').trim() !== targetTime) {
+      return false;
+    }
+    return true;
+  });
+
+  return [warrant, ...matched];
+};
+
+const formatSuspectAddr = (w) =>
+  [
+    w.houseNo,
+    w.moo ? `ม.${w.moo}` : '',
+    w.road ? `ถ.${w.road}` : '',
+    w.subdistrict ? `ต./แขวง ${w.subdistrict}` : '',
+    w.district ? `อ./เขต ${w.district}` : '',
+    w.province ? `จ.${w.province}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+/**
  * Format LINE Report message matching template file/defult template/รายงานไลน์.txt
  */
-export const generateLineReportText = (warrant, personnel = []) => {
+export const generateLineReportText = (warrant, personnel = [], allWarrants = []) => {
+  const group = findGroupArrestees(warrant, allWarrants);
+  const isMulti = group.length > 1;
   const fullName = `${warrant.prefix || ''}${warrant.firstName || ''} ${warrant.lastName || ''}`.trim();
   const shortName = `${warrant.prefix || ''}${warrant.firstName || ''}ฯ`.trim();
+  const shortNamesAll = group
+    .map((g) => `${g.prefix || ''}${g.firstName || ''}ฯ`.trim())
+    .filter(Boolean)
+    .join(' ');
   const ownerTag = warrant.owner === 'หมายจับภายนอก' ? 'หมายนอก' : 'หมายใน';
-  const addrParts = [
-    warrant.houseNo,
-    warrant.moo ? `ม.${warrant.moo}` : '',
-    warrant.road ? `ถ.${warrant.road}` : '',
-    warrant.subdistrict ? `ต./แขวง ${warrant.subdistrict}` : '',
-    warrant.district ? `อ./เขต ${warrant.district}` : '',
-    warrant.province ? `จ.${warrant.province}` : '',
-  ].filter(Boolean).join(' ');
 
   const arrestArea = [
     warrant.arrestLocation,
@@ -554,9 +589,23 @@ export const generateLineReportText = (warrant, personnel = []) => {
   const issueDateFull = formatThaiDateBuddhist(warrant.issueDate, false);
   const handoverLoc = warrant.handoverLocation || 'กก.2 บก.ปอท.';
 
+  const suspectBlock = isMulti
+    ? group
+        .map((g, idx) => {
+          const gName = `${g.prefix || ''}${g.firstName || ''} ${g.lastName || ''}`.trim();
+          const gAddr = formatSuspectAddr(g);
+          const gIssue = formatThaiDateBuddhist(g.issueDate, false);
+          return `${idx + 1}. ${gName}${g.age ? ` อายุ ${g.age} ปี` : ''} เลขประจำตัวประชาชน ${g.nationalId || '-'} ที่อยู่ ${gAddr || '-'} ผู้ต้องหาตามหมายจับ${g.court || '-'} ที่ ${g.warrantNumber || '-'} ลงวันที่ ${gIssue}`;
+        })
+        .join('\n')
+    : `${fullName}${warrant.age ? ` อายุ ${warrant.age} ปี` : ''} เลขประจำตัวประชาชน ${warrant.nationalId || '-'} ที่อยู่ ${formatSuspectAddr(warrant) || '-'} ผู้ต้องหาตามหมายจับ${warrant.court || '-'} ที่ ${warrant.warrantNumber || '-'} ลงวันที่ ${issueDateFull}`;
+
+  const foundSuspectText = isMulti ? shortNamesAll : fullName;
+  const shownSuspectText = isMulti ? shortNamesAll : shortName;
+
   return `เรียนผู้บังคับบัญชาเพื่อโปรดทราบ
 
-กก.2 บก.ปอท. ขออนุญาตรายงานผลการจับกุมผู้ต้องหาตามหมายจับ (${ownerTag}) 1 ราย ดังนี้
+กก.2 บก.ปอท. ขออนุญาตรายงานผลการจับกุมผู้ต้องหาตามหมายจับ (${ownerTag}) ${group.length} ราย ดังนี้
 
 🔵 เมื่อวันที่ ${arrestDateFull} เวลาประมาณ ${arrestTimeStr} น.
 
@@ -564,11 +613,11 @@ export const generateLineReportText = (warrant, personnel = []) => {
 
 เจ้าหน้าที่ตำรวจชุดจับกุม นำโดย ${officerList || '-'}${jointUnitSuffix}
 
-🔵 ร่วมกันจับกุมผู้ต้องหาตามหมายจับ ${fullName}${warrant.age ? ` อายุ ${warrant.age} ปี` : ''} เลขประจำตัวประชาชน ${warrant.nationalId || '-'} ที่อยู่ ${addrParts || '-'} ผู้ต้องหาตามหมายจับ${warrant.court || '-'} ที่ ${warrant.warrantNumber || '-'} ลงวันที่ ${issueDateFull}
+🔵 ร่วมกันจับกุมผู้ต้องหาตามหมายจับ ${isMulti ? '\n' + suspectBlock : suspectBlock}
 
 ความผิดฐาน “${warrant.charge || '-'}”
 
-🔴 พฤติการณ์การจับกุม กล่าวคือ เจ้าพนักงานตำรวจชุดจับกุม กก.2 บก.ปอท. ได้สืบสวนติดตามตัวผู้ต้องหาตามหมายจับข้างต้น โดยได้รับแจ้งจากสายลับว่า ผู้ต้องหาได้หลบหนีมาอยู่บริเวณ${arrestArea || '-'} ต่อมา (${arrestDateShort}) เจ้าพนักงานตำรวจชุดจับกุม จึงได้วางแผนและเดินทางไปเฝ้ารอสังเกตการณ์ เมื่อถึงเวลาประมาณ ${arrestTimeStr} น. ได้พบ ${fullName} อยู่บริเวณ${arrestArea || '-'} (สถานที่จับกุม) เจ้าพนักงานตำรวจชุดจับกุมจึงแสดงตนเข้าจับกุม ต่อมาได้แสดงหมายจับดังกล่าวให้ ${shortName} ดูและอ่านให้ฟัง โดย ${shortName} รับว่าเป็นบุคคลตามหมายจับนี้จริง และไม่เคยถูกจับกุมตามหมายจับนี้มาก่อน จากนั้นจึงแจ้งให้ทราบว่าจะต้องถูกจับกุมในข้อหาดังกล่าวข้างต้นพร้อมแจ้งสิทธิตามกฎหมายให้ทราบ จากนั้นนำส่งพนักงานสอบสวน ${handoverLoc} ดำเนินการต่อไป
+🔴 พฤติการณ์การจับกุม กล่าวคือ เจ้าพนักงานตำรวจชุดจับกุม กก.2 บก.ปอท. ได้สืบสวนติดตามตัวผู้ต้องหาตามหมายจับข้างต้น โดยได้รับแจ้งจากสายลับว่า ผู้ต้องหาได้หลบหนีมาอยู่บริเวณ${arrestArea || '-'} ต่อมา (${arrestDateShort}) เจ้าพนักงานตำรวจชุดจับกุม จึงได้วางแผนและเดินทางไปเฝ้ารอสังเกตการณ์ เมื่อถึงเวลาประมาณ ${arrestTimeStr} น. ได้พบ ${foundSuspectText} อยู่บริเวณ${arrestArea || '-'} (สถานที่จับกุม) เจ้าพนักงานตำรวจชุดจับกุมจึงแสดงตนเข้าจับกุม ต่อมาได้แสดงหมายจับดังกล่าวให้ ${shownSuspectText} ดูและอ่านให้ฟัง โดย ${shownSuspectText} รับว่าเป็นบุคคลตามหมายจับนี้จริง และไม่เคยถูกจับกุมตามหมายจับนี้มาก่อน จากนั้นจึงแจ้งให้ทราบว่าจะต้องถูกจับกุมในข้อหาดังกล่าวข้างต้นพร้อมแจ้งสิทธิตามกฎหมายให้ทราบ จากนั้นนำส่งพนักงานสอบสวน ${handoverLoc} ดำเนินการต่อไป
 
 🔵 สถานที่จับกุม
 ${arrestArea || '-'}
