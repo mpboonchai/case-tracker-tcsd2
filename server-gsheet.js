@@ -542,7 +542,7 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         photoReport2: normalizeImageUrl(r['ภาพรายงาน_2']),
         photoReport3: normalizeImageUrl(r['ภาพรายงาน_3']),
         newsLink: r['ลิงก์ข่าว'] || '',
-        role: r['บทบาท/หน้าที่'] || '',
+        role: r['บทบาท/หน้าที่'] || r['ตำแหน่ง/หน้าที่'] || '',
         notes: r['หมายเหตุ'] || '',
         searchWarrantCourt: r['ศาลหมายค้น'] !== undefined ? r['ศาลหมายค้น'] : (existing?.searchWarrantCourt || ''),
         searchWarrantNumber: r['เลขหมายค้น'] !== undefined ? r['เลขหมายค้น'] : (existing?.searchWarrantNumber || ''),

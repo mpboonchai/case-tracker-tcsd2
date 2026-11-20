@@ -1098,6 +1098,7 @@ export default function CaseOperationsView({
                         <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/50">
                           <th className="p-2.5">ลำดับ</th>
                           <th className="p-2.5">ชื่อ-นามสกุลผู้ต้องหา</th>
+                          <th className="p-2.5">ตำแหน่ง/หน้าที่</th>
                           <th className="p-2.5">เลขบัตรประชาชน</th>
                           <th className="p-2.5">หมายจับ / ศาล</th>
                           <th className="p-2.5">สถานะจับกุม</th>
@@ -1112,6 +1113,15 @@ export default function CaseOperationsView({
                               <td className="p-2.5 text-slate-400">{idx + 1}</td>
                               <td className="p-2.5 font-bold text-white">
                                 {w.suspectName || `${w.prefix || ''}${w.firstName || ''} ${w.lastName || ''}`.trim() || '-'}
+                              </td>
+                              <td className="p-2.5">
+                                {w.role ? (
+                                  <span className="inline-block px-2 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-200 text-[11px]">
+                                    {w.role}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500">-</span>
+                                )}
                               </td>
                               <td className="p-2.5 font-mono text-slate-300">
                                 {w.nationalId || '-'}

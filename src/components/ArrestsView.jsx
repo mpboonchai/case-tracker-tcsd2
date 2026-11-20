@@ -521,6 +521,7 @@ export default function ArrestsView({
                 <th className="px-3.5 py-2.5">วันที่จับกุม</th>
                 <th className="px-3.5 py-2.5">ชื่อเคส</th>
                 <th className="px-3.5 py-2.5">ผู้ต้องหา / เลขบัตร</th>
+                <th className="px-3.5 py-2.5">ตำแหน่ง/หน้าที่</th>
                 <th className="px-3.5 py-2.5">หมายจับ / ศาล</th>
                 <th className="px-3.5 py-2.5">ข้อหา</th>
                 <th className="px-3.5 py-2.5">ประเภท</th>
@@ -530,7 +531,7 @@ export default function ArrestsView({
             <tbody className="divide-y divide-blue-900/40">
               {arrestedList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
                     ยังไม่มีรายการจับกุมในช่วงที่เลือก
                   </td>
                 </tr>
@@ -552,6 +553,15 @@ export default function ArrestsView({
                       <div className="text-[10px] font-mono text-slate-400">
                         {w.nationalId || '-'}
                       </div>
+                    </td>
+                    <td className="px-3.5 py-2.5 max-w-[160px]">
+                      {w.role ? (
+                        <span className="inline-block px-2 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-200 text-[11px] font-medium">
+                          {w.role}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">-</span>
+                      )}
                     </td>
                     <td className="px-3.5 py-2.5 whitespace-nowrap">
                       <div className="font-semibold text-amber-300">{w.warrantNumber}</div>
@@ -623,6 +633,7 @@ export default function ArrestsView({
                 <th className="px-3.5 py-2.5">วันที่ออกหมาย</th>
                 <th className="px-3.5 py-2.5">ชื่อเคส</th>
                 <th className="px-3.5 py-2.5">ผู้ต้องหา / เลขบัตร</th>
+                <th className="px-3.5 py-2.5">ตำแหน่ง/หน้าที่</th>
                 <th className="px-3.5 py-2.5">หมายจับ / ศาล</th>
                 <th className="px-3.5 py-2.5">ข้อหา</th>
                 <th className="px-3.5 py-2.5">ผู้รับผิดชอบ</th>
@@ -632,7 +643,7 @@ export default function ArrestsView({
             <tbody className="divide-y divide-blue-900/40">
               {activeWarrantList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
                     ไม่มีหมายจับที่อยู่ระหว่างสืบสวน
                   </td>
                 </tr>
@@ -654,6 +665,15 @@ export default function ArrestsView({
                       <div className="text-[10px] font-mono text-slate-400">
                         {w.nationalId || '-'}
                       </div>
+                    </td>
+                    <td className="px-3.5 py-2.5 max-w-[160px]">
+                      {w.role ? (
+                        <span className="inline-block px-2 py-0.5 rounded bg-violet-500/15 border border-violet-500/30 text-violet-200 text-[11px] font-medium">
+                          {w.role}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">-</span>
+                      )}
                     </td>
                     <td className="px-3.5 py-2.5 whitespace-nowrap">
                       <div className="font-semibold text-amber-300">{w.warrantNumber}</div>

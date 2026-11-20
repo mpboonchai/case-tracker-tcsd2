@@ -580,7 +580,7 @@ export default function WarrantModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className={labelClass}>บทบาท / หน้าที่</label>
+                  <label className={labelClass}>ตำแหน่ง / หน้าที่ (บทบาทในคดี)</label>
                   <input
                     type="text"
                     value={formData.role || ''}

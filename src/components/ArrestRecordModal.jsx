@@ -10,7 +10,8 @@ import {
   Trash2,
   UserPlus,
   Copy,
-  Search
+  Search,
+  ClipboardPaste
 } from 'lucide-react';
 import { THAI_PROVINCES } from '../data/initialData';
 import { normalizeImageUrl, formatTimeHHMM } from '../services/storage';
@@ -62,6 +63,28 @@ function compressImageFile(file, maxSize = 1200, quality = 0.85) {
   });
 }
 
+async function pasteImageFromClipboard(onFile) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.read) {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imgType = item.types.find((t) => t.startsWith('image/'));
+        if (imgType) {
+          const blob = await item.getType(imgType);
+          const file = new File([blob], `clipboard_${Date.now()}.png`, { type: imgType });
+          await onFile(file);
+          return;
+        }
+      }
+      alert('ไม่พบรูปภาพใน Clipboard (กรุณาคัดลอกรูปภาพ หรือคลิกที่กรอบช่องรูปแล้วกด Ctrl+V)');
+      return;
+    }
+    alert('กรุณาคลิกที่กรอบช่องรูปแล้วกดปุ่ม Ctrl+V บนคีย์บอร์ดเพื่อวางรูปจาก Clipboard');
+  } catch {
+    alert('กรุณาคลิกที่กรอบช่องรูปแล้วกดปุ่ม Ctrl+V บนคีย์บอร์ดเพื่อวางรูปจาก Clipboard');
+  }
+}
+
 function extractPerSuspectFields(w) {
   return {
     photoArrest: w?.photoArrest || '',
@@ -75,6 +98,7 @@ function extractPerSuspectFields(w) {
     relativePhone: w?.relativePhone || '',
     relativeRelation: w?.relativeRelation || '',
     interrogationFileUrl: w?.interrogationFileUrl || '',
+    role: w?.role || '',
   };
 }
 
@@ -342,6 +366,7 @@ export default function ArrestRecordModal({
         relativeLastName: ind.relativeLastName || '',
         relativePhone: ind.relativePhone || '',
         relativeRelation: ind.relativeRelation || '',
+        role: ind.role !== undefined ? ind.role : (sus.role || ''),
         status: 'จับกุมแล้ว',
       };
     });
@@ -1021,6 +1046,19 @@ export default function ArrestRecordModal({
                       </div>
                     </div>
 
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="text-[11px] font-semibold text-cyan-300 shrink-0">
+                        ตำแหน่ง / หน้าที่ในคดี:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="เช่น ผู้สั่งการ, บัญชีม้าแถว 1, ผู้กดเงิน, แอดมินเพจ"
+                        value={sData.role || ''}
+                        onChange={(e) => updateSuspectField(sus.id, 'role', e.target.value)}
+                        className="flex-1 min-w-[200px] px-2.5 py-1 rounded-lg bg-[#070D1E] border border-blue-900/60 text-xs text-cyan-200 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition"
+                      />
+                    </div>
+
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                       {PHOTO_SLOTS.map((slot) => {
                         const slotUid = `${sus.id}:${slot.key}`;
@@ -1105,21 +1143,31 @@ export default function ArrestRecordModal({
                                 </button>
                               </div>
                             ) : (
-                              <label className="w-full aspect-[3/4] rounded border border-dashed border-blue-700/70 hover:border-amber-400/70 bg-[#0B142A]/60 flex flex-col items-center justify-center gap-1 cursor-pointer text-slate-400 hover:text-amber-300 transition text-center px-1">
-                                <Upload className="w-4 h-4" />
-                                <span className="text-[10px] leading-tight">
-                                  {isDragging ? 'วางรูปที่นี่' : 'คลิก / ลากรูปวาง'}
-                                </span>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={async (e) => {
-                                    await handleFile(e.target.files?.[0]);
-                                    e.target.value = '';
-                                  }}
-                                />
-                              </label>
+                              <div className="w-full flex flex-col gap-1.5">
+                                <label className="w-full aspect-[3/4] rounded border border-dashed border-blue-700/70 hover:border-amber-400/70 bg-[#0B142A]/60 flex flex-col items-center justify-center gap-1 cursor-pointer text-slate-400 hover:text-amber-300 transition text-center px-1">
+                                  <Upload className="w-4 h-4" />
+                                  <span className="text-[10px] leading-tight">
+                                    {isDragging ? 'วางรูปที่นี่' : 'คลิก / ลาก / Ctrl+V'}
+                                  </span>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                      await handleFile(e.target.files?.[0]);
+                                      e.target.value = '';
+                                    }}
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => pasteImageFromClipboard(handleFile)}
+                                  className="w-full py-1 px-1.5 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[10px] font-semibold flex items-center justify-center gap-1 transition"
+                                >
+                                  <ClipboardPaste className="w-3 h-3" />
+                                  <span>วางรูป</span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         );
@@ -1201,6 +1249,18 @@ export default function ArrestRecordModal({
                 return (
                   <div
                     key={slot.key}
+                    tabIndex={0}
+                    onPaste={async (e) => {
+                      const items = e.clipboardData?.items;
+                      if (!items) return;
+                      for (const item of items) {
+                        if (item.type && item.type.startsWith('image/')) {
+                          e.preventDefault();
+                          await handleFile(item.getAsFile());
+                          return;
+                        }
+                      }
+                    }}
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -1217,7 +1277,7 @@ export default function ArrestRecordModal({
                       setDragOverSlot(null);
                       await handleFile(e.dataTransfer?.files?.[0]);
                     }}
-                    className={`p-2 rounded-lg border flex flex-col items-center gap-1.5 transition ${
+                    className={`p-2 rounded-lg border flex flex-col items-center gap-1.5 transition focus:outline-none focus:border-cyan-400 ${
                       isDragging
                         ? 'bg-cyan-500/15 border-cyan-400 ring-2 ring-cyan-400/50'
                         : 'bg-[#0B142A] border-blue-900/50'
@@ -1249,21 +1309,31 @@ export default function ArrestRecordModal({
                         </button>
                       </div>
                     ) : (
-                      <label className="w-full aspect-[16/10] rounded border border-dashed border-cyan-700/70 hover:border-cyan-400/70 bg-[#070D1E]/60 flex flex-col items-center justify-center gap-1 cursor-pointer text-slate-400 hover:text-cyan-300 transition text-center px-1">
-                        <Upload className="w-4 h-4" />
-                        <span className="text-[10px] leading-tight">
-                          {isDragging ? 'วางรูปที่นี่' : 'คลิก หรือ ลากรูปมาวาง'}
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={async (e) => {
-                            await handleFile(e.target.files?.[0]);
-                            e.target.value = '';
-                          }}
-                        />
-                      </label>
+                      <div className="w-full flex flex-col gap-1.5">
+                        <label className="w-full aspect-[16/10] rounded border border-dashed border-cyan-700/70 hover:border-cyan-400/70 bg-[#070D1E]/60 flex flex-col items-center justify-center gap-1 cursor-pointer text-slate-400 hover:text-cyan-300 transition text-center px-1">
+                          <Upload className="w-4 h-4" />
+                          <span className="text-[10px] leading-tight">
+                            {isDragging ? 'วางรูปที่นี่' : 'คลิก / ลากวาง / Ctrl+V'}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              await handleFile(e.target.files?.[0]);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => pasteImageFromClipboard(handleFile)}
+                          className="w-full py-1 px-2 rounded bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-[10px] font-semibold flex items-center justify-center gap-1 transition"
+                        >
+                          <ClipboardPaste className="w-3 h-3" />
+                          <span>วางรูป (Clipboard)</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 );
