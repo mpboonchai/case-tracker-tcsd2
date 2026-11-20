@@ -48,7 +48,7 @@ export default function CaseFilterBar({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหา: ชื่องาน, เลขหนังสือ ตช..., หน่วยงาน, รายละเอียด..."
+            placeholder="ค้นหา: ชื่อเคส, ชื่องาน, ชื่อผู้ต้องหา, เลขหนังสือ ตช..., หน่วยงาน..."
             className="w-full pl-8 pr-8 py-2 bg-[#070D1E] rounded-lg border border-blue-900/60 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition"
           />
           {searchQuery && (

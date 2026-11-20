@@ -416,6 +416,7 @@ export default function App() {
             users={users}
             personnel={personnel}
             operations={operations}
+            warrants={warrants}
             currentUser={currentUser}
             onToggleCheck={handleToggleCheck}
             onSaveCase={handleSaveCase}
@@ -430,6 +431,7 @@ export default function App() {
             users={users}
             personnel={personnel}
             operations={operations}
+            warrants={warrants}
             currentUser={currentUser}
             onToggleCheck={handleToggleCheck}
             onSaveCase={handleSaveCase}

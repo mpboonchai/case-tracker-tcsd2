@@ -183,12 +183,25 @@ export default function CaseOperationsView({
         statusFilter === 'ทั้งหมด' || op.status === statusFilter;
       const q = searchTerm.trim().toLowerCase();
       if (!q) return matchesStatus;
+      const matchesSuspect = Array.isArray(op.warrants) && op.warrants.some((w) => {
+        const fullName = `${w.prefix || ''}${w.firstName || ''} ${w.lastName || ''}`.toLowerCase();
+        const plainName = `${w.firstName || ''} ${w.lastName || ''}`.toLowerCase();
+        return (
+          fullName.includes(q) ||
+          plainName.includes(q) ||
+          (w.suspectName || '').toLowerCase().includes(q) ||
+          (w.nationalId || '').toLowerCase().includes(q) ||
+          (w.warrantNumber || '').toLowerCase().includes(q) ||
+          (w.role || '').toLowerCase().includes(q)
+        );
+      });
       const matchesSearch =
         (op.caseName || '').toLowerCase().includes(q) ||
         (op.caseCode || '').toLowerCase().includes(q) ||
         (op.details || '').toLowerCase().includes(q) ||
         (op.additionalNotes || '').toLowerCase().includes(q) ||
-        (op.leadOfficerName || '').toLowerCase().includes(q);
+        (op.leadOfficerName || '').toLowerCase().includes(q) ||
+        matchesSuspect;
       return matchesStatus && matchesSearch;
     });
   }, [enrichedOperations, statusFilter, searchTerm]);
@@ -687,7 +700,7 @@ export default function CaseOperationsView({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="ค้นหาชื่อเคส, รหัสเคส, รายละเอียด..."
+                placeholder="ค้นหาชื่อเคส, รหัสเคส, ชื่อผู้ต้องหา, เลขบัตร, หมายจับ..."
                 className="w-full pl-9 pr-3 py-1.5 bg-[#091022] border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
             </div>

@@ -16,6 +16,7 @@ export default function MemberView({
   users,
   personnel = [],
   operations = [],
+  warrants = [],
   currentUser,
   onToggleCheck,
   onSaveCase,
@@ -51,11 +52,19 @@ export default function MemberView({
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       const matchTitle = item.title?.toLowerCase().includes(q);
+      const matchCaseName = item.caseName?.toLowerCase().includes(q);
       const matchDoc = item.docNumber?.toLowerCase().includes(q);
       const matchAgency = item.targetAgency?.toLowerCase().includes(q);
       const matchDetails = item.details?.toLowerCase().includes(q);
       const matchNotes = item.notes?.toLowerCase().includes(q);
-      if (!matchTitle && !matchDoc && !matchAgency && !matchDetails && !matchNotes) return false;
+      const itemCaseKey = (item.caseName || '').trim().toLowerCase();
+      const matchSuspect = itemCaseKey && warrants.some(w => {
+        if ((w.caseName || '').trim().toLowerCase() !== itemCaseKey) return false;
+        const fullName = `${w.prefix || ''}${w.firstName || ''} ${w.lastName || ''}`.toLowerCase();
+        const plainName = `${w.firstName || ''} ${w.lastName || ''}`.toLowerCase();
+        return fullName.includes(q) || plainName.includes(q) || (w.suspectName || '').toLowerCase().includes(q) || (w.nationalId || '').toLowerCase().includes(q);
+      });
+      if (!matchTitle && !matchCaseName && !matchDoc && !matchAgency && !matchDetails && !matchNotes && !matchSuspect) return false;
     }
 
     if (statusFilter === 'in_progress') {

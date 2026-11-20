@@ -121,14 +121,18 @@ export default function ArrestsView({
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       const fullName = `${w.prefix || ''}${w.firstName || ''} ${w.lastName || ''}`.toLowerCase();
+      const plainName = `${w.firstName || ''} ${w.lastName || ''}`.toLowerCase();
       const match =
         fullName.includes(q) ||
+        plainName.includes(q) ||
+        (w.suspectName || '').toLowerCase().includes(q) ||
         cName.toLowerCase().includes(q) ||
         (w.nationalId || '').toLowerCase().includes(q) ||
         (w.warrantNumber || '').toLowerCase().includes(q) ||
         (w.court || '').toLowerCase().includes(q) ||
         (w.charge || '').toLowerCase().includes(q) ||
         (w.role || '').toLowerCase().includes(q) ||
+        (w.arrestLocation || '').toLowerCase().includes(q) ||
         (w.notes || '').toLowerCase().includes(q);
       if (!match) return false;
     }
