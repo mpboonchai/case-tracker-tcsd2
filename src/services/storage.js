@@ -603,6 +603,44 @@ export const generateLineReportText = (warrant, personnel = [], allWarrants = []
   const foundSuspectText = isMulti ? shortNamesAll : fullName;
   const shownSuspectText = isMulti ? shortNamesAll : shortName;
 
+  // Classic ("จับกุมธรรมดา แยกค้น") LINE report format (prior to search-combined update)
+  if (warrant.arrestMode === 'normal') {
+    const classicOfficerList = (warrant.arrestingOfficers || [])
+      .map((id) => personnel.find((p) => p.id === id))
+      .filter(Boolean)
+      .map((p) => `${p.prefix}${p.firstName} ${p.lastName} ${p.positionDetail || p.position}`.trim())
+      .join(', ');
+    const classicSuspectLine = isMulti
+      ? '\n' +
+        group
+          .map((g, idx) => {
+            const gName = `${g.prefix || ''}${g.firstName || ''} ${g.lastName || ''}`.trim();
+            const gAddr = formatSuspectAddr(g);
+            return `${idx + 1}. ${gName}${g.age ? ` อายุ ${g.age} ปี` : ''} เลขประจำตัวประชาชน ${g.nationalId || '-'} ที่อยู่ ${gAddr || '-'} ผู้ต้องหาตามหมายจับ${g.court || '-'} ที่ ${g.warrantNumber || '-'} ลงวันที่ ${formatThaiDateFull(g.issueDate)}`;
+          })
+          .join('\n')
+      : `${fullName}${warrant.age ? ` อายุ ${warrant.age} ปี` : ''} เลขประจำตัวประชาชน ${warrant.nationalId || '-'} ที่อยู่ ${formatSuspectAddr(warrant) || '-'}\nผู้ต้องหาตามหมายจับ${warrant.court || '-'} ที่ ${warrant.warrantNumber || '-'} ลงวันที่ ${formatThaiDateFull(warrant.issueDate)}`;
+
+    return `เรียนผู้บังคับบัญชาเพื่อโปรดทราบ
+
+กก.2 บก.ปอท. ขออนุญาตรายงานผลการจับกุมผู้ต้องหาตามหมายจับ (${ownerTag}) ${group.length} ราย ดังนี้
+
+🔵 เมื่อวันที่ ${formatThaiDateFull(warrant.arrestDate)} เวลาประมาณ ${arrestTimeStr} น.
+
+🟡 ภายใต้การอำนวยการของ พล.ต.ท.ณัฐศักดิ์ เชาวนาศัย ผบช.ก., พล.ต.ต.อธิป พงษ์ศิวาภัย รอง ผบช.ก., พล.ต.ต.ชนันนัทธ์ สารถวัลย์แพศย์ ผบก.ปอท., พ.ต.อ.วัชรพันธ์ ศิริพากย์, พ.ต.อ.เนติ วงษ์กุหลาบ รอง ผบก.ปอท., ว่าที่ พ.ต.อ.นิธิ ตรีสุวรรณ ผกก.3 บก.ปอศ.รรท.ผกก.2 บก.ปอท., พ.ต.ท.สัตตเมธ ใจแก้ว, พ.ต.ท.ธนะ ว่องทรง รอง ผกก.2 บก.ปอท.
+
+เจ้าหน้าที่ตำรวจชุดจับกุม นำโดย ${classicOfficerList || '-'}
+
+🔵 ร่วมกันจับกุมผู้ต้องหาตามหมายจับ ${classicSuspectLine}
+
+ความผิดฐาน “${warrant.charge || '-'}”
+
+🔵 สถานที่จับกุม
+${arrestArea || '-'}
+
+🔴 นำตัวผู้ต้องหาส่ง ${warrant.handoverLocation || 'พนักงานสอบสวน กก.2 บก.ปอท.'} เพื่อดำเนินคดีตามกฎหมายต่อไป`;
+  }
+
   return `เรียนผู้บังคับบัญชาเพื่อโปรดทราบ
 
 กก.2 บก.ปอท. ขออนุญาตรายงานผลการจับกุมผู้ต้องหาตามหมายจับ (${ownerTag}) ${group.length} ราย ดังนี้

@@ -317,7 +317,8 @@ function writeObjectsToTab(ss, tabName, rows) {
       'เวลาเสร็จสิ้นการตรวจค้น',
       'สิ่งของตรวจยึด',
       'คำให้การ',
-      'ชุดจับกุมหน่วยร่วม'
+      'ชุดจับกุมหน่วยร่วม',
+      'รูปแบบการจับกุม'
     ];
     for (var nc = 0; nc < neededWarrantCols.length; nc++) {
       var colTitle = neededWarrantCols[nc];

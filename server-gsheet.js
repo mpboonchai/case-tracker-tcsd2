@@ -369,6 +369,7 @@ function toSheetRows(collection, items, personnel = []) {
         'สิ่งของตรวจยึด': w.seizedItemsSummary || '',
         'คำให้การ': w.pleaType || '',
         'ชุดจับกุมหน่วยร่วม': w.jointArrestUnit || '',
+        'รูปแบบการจับกุม': w.arrestMode || 'search_combined',
       };
       const officerIds = Array.isArray(w.arrestingOfficers) ? w.arrestingOfficers : [];
       for (let i = 1; i <= 10; i++) {
@@ -555,6 +556,7 @@ function fromSheetWarrants(rows, personnel = [], existingWarrants = []) {
         seizedItemsSummary: r['สิ่งของตรวจยึด'] !== undefined ? r['สิ่งของตรวจยึด'] : (existing?.seizedItemsSummary || ''),
         pleaType: r['คำให้การ'] !== undefined ? r['คำให้การ'] : (existing?.pleaType || 'ปฏิเสธ'),
         jointArrestUnit: r['ชุดจับกุมหน่วยร่วม'] !== undefined ? r['ชุดจับกุมหน่วยร่วม'] : (existing?.jointArrestUnit || ''),
+        arrestMode: r['รูปแบบการจับกุม'] !== undefined ? r['รูปแบบการจับกุม'] : (existing?.arrestMode || 'search_combined'),
       };
     });
 }

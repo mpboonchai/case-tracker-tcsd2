@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const TEMPLATE_DIR = path.join(__dirname, 'template file', 'defult template');
+const CLASSIC_TEMPLATE_DIR = path.join(__dirname, 'template file', 'classic template');
 
 const TEMPLATE_FILES = {
   arrest_record: 'บันทึกการจับกุม_Template.docx',
@@ -396,7 +397,7 @@ function ensureContentTypeExtensions(zip, addedExts) {
   zip.file('[Content_Types].xml', typesXml);
 }
 
-async function injectDocxImages(zip, warrant, docType) {
+async function injectDocxImages(zip, warrant, docType, isNormalMode = false) {
   const docEntry = zip.file('word/document.xml');
   const relsEntry = zip.file('word/_rels/document.xml.rels');
   if (!docEntry || !relsEntry) return;
@@ -438,9 +439,12 @@ async function injectDocxImages(zip, warrant, docType) {
     }
   }
 
-  // Only append unplaced photos for sec23 if the template didn't already have inline slots
-  if (docType === 'sec23' && unplacedSlots.length > 0) {
-    const title = 'ภาพถ่ายประกอบบันทึกการควบคุมตัว (ม.23)';
+  // Append unplaced photos for sec23 (or classic arrest_record) if template didn't have inline slots
+  if ((docType === 'sec23' || (isNormalMode && docType === 'arrest_record')) && unplacedSlots.length > 0) {
+    const title =
+      docType === 'sec23'
+        ? 'ภาพถ่ายประกอบบันทึกการควบคุมตัว (ม.23)'
+        : 'ภาพถ่ายผู้ต้องหาประกอบบันทึกการจับกุม';
     const appendixParagraphs = [
       `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`,
       `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>${title}</w:t></w:r></w:p>`,
@@ -576,7 +580,9 @@ export async function generateDocumentBuffer(type, warrant, personnel = [], allW
     throw new Error(`Unknown template type: ${type}`);
   }
 
-  const filePath = path.join(TEMPLATE_DIR, fileName);
+  const isNormalMode = warrant.arrestMode === 'normal';
+  const activeDir = isNormalMode ? CLASSIC_TEMPLATE_DIR : TEMPLATE_DIR;
+  const filePath = path.join(activeDir, fileName);
   if (!fs.existsSync(filePath)) {
     throw new Error(`Template file not found: ${filePath}`);
   }
@@ -594,7 +600,7 @@ export async function generateDocumentBuffer(type, warrant, personnel = [], allW
   Object.keys(zip.files).forEach((entryName) => {
     if (xmlPattern.test(entryName)) {
       let xml = zip.files[entryName].asText();
-      if (type === 'arrest_record' && entryName === 'word/document.xml') {
+      if (!isNormalMode && type === 'arrest_record' && entryName === 'word/document.xml') {
         xml = cleanupArrestRecordDynamicBlocks(xml, map);
       }
       const updated = replacePlaceholdersInXml(xml, map, tagChar);
@@ -603,7 +609,7 @@ export async function generateDocumentBuffer(type, warrant, personnel = [], allW
   });
 
   if (!isPpt) {
-    await injectDocxImages(zip, warrant, type);
+    await injectDocxImages(zip, warrant, type, isNormalMode);
   } else {
     await injectPptxImages(zip, warrant);
   }

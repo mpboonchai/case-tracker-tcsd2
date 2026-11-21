@@ -119,6 +119,7 @@ export default function ArrestRecordModal({
   const initializedWarrantIdRef = useRef(null);
 
   const [formData, setFormData] = useState({
+    arrestMode: 'search_combined',
     arrestDate: '',
     arrestTime: '',
     arrestLocation: '',
@@ -184,6 +185,7 @@ export default function ArrestRecordModal({
     setPerSuspectData(initMap);
 
     setFormData({
+      arrestMode: warrant.arrestMode || 'search_combined',
       arrestDate: toDMY(warrant.arrestDate) || today,
       arrestTime: formatTimeHHMM(warrant.arrestTime) || '09:00',
       arrestLocation: warrant.arrestLocation || '',
@@ -510,6 +512,26 @@ export default function ArrestRecordModal({
             </div>
           </div>
 
+          {/* 0.5 Arrest Mode Selector (2 Modes) */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-950/35 via-[#070D1E] to-[#070D1E] border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-bold text-amber-300">
+                รูปแบบการบันทึกการจับกุม (เลือกเทมเพลตเอกสาร & รายงาน LINE)
+              </div>
+              <div className="text-[11px] text-slate-400">
+                เลือกได้ระหว่างแบบรวมตรวจค้นตามหมายในบันทึกเดียว หรือแบบจับกุมธรรมดาแยกค้น (แบบเดิม)
+              </div>
+            </div>
+            <select
+              value={formData.arrestMode || 'search_combined'}
+              onChange={(e) => updateField('arrestMode', e.target.value)}
+              className="sm:w-80 px-3 py-2 rounded-lg bg-[#050A18] border border-amber-500/50 text-xs font-semibold text-amber-200 focus:outline-none focus:border-amber-400 transition"
+            >
+              <option value="search_combined">จับกุมและค้นตามหมายในบันทึกเดียว (แบบใหม่)</option>
+              <option value="normal">จับกุมธรรมดา แยกค้น (แบบเดิม)</option>
+            </select>
+          </div>
+
           {/* 1. Arrest Location & Time */}
           <div className="p-3.5 rounded-xl bg-[#070D1E]/70 border border-blue-900/50 space-y-3">
             <div className="text-xs font-bold text-amber-400">
@@ -681,7 +703,8 @@ export default function ArrestRecordModal({
             </div>
           </div>
 
-          {/* 2.5 Search Warrant & Seizure Information (ข้อมูลเกี่ยวกับหมายค้นและการตรวจยึด) */}
+          {/* 2.5 Search Warrant & Seizure Information (Only shown in search_combined mode) */}
+          {formData.arrestMode !== 'normal' && (
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-950/30 via-[#070D1E] to-[#070D1E] border border-amber-500/40 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="text-xs font-bold text-amber-400">
@@ -805,6 +828,7 @@ export default function ArrestRecordModal({
               </div>
             </div>
           </div>
+          )}
 
           {/* 3 & 4. Relative (for single suspect) & Handover */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
