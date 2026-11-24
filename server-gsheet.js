@@ -276,8 +276,19 @@ function toSheetRows(collection, items, personnel = []) {
       'ผู้รับผิดชอบ': c.assignedToName || '',
       'สถานะ': c.status === 'completed' ? 'เสร็จสิ้น' : c.status === 'waiting_agency' ? 'รอผลหน่วยงาน' : 'กำลังดำเนินการ',
       'ไฟล์ที่เกี่ยวข้อง': Array.isArray(c.relatedFiles) ? c.relatedFiles.join(', ') : (c.relatedFiles || ''),
-      'ลิงก์ที่เกี่ยวข้อง': c.relatedLinks || '',
+      'ลิงก์ที่เกี่ยวข้อง': Array.isArray(c.relatedLinks) ? JSON.stringify(c.relatedLinks) : (c.relatedLinks || ''),
       'Folder ID': c.folderId || '',
+      'เลขหนังสือ': c.docNumber || '',
+      'ปลายทาง': c.targetAgency || '',
+      'ช่องทาง': c.channel || '',
+      'ผล': c.result || '',
+      'ขอแล้ว': c.check1_requested ? 'TRUE' : 'FALSE',
+      'ได้รับแล้ว': c.check2_received ? 'TRUE' : 'FALSE',
+      'ดูไฟล์แล้ว': c.check3_verified ? 'TRUE' : 'FALSE',
+      'กำหนดส่ง': c.deadline || '',
+      'ความสำคัญ': c.priority || 'normal',
+      'ผู้ร่วมรับผิดชอบ': Array.isArray(c.coAssignees) ? JSON.stringify(c.coAssignees) : (c.coAssignees || ''),
+      'หัวข้องาน': c.title || '',
     }));
   }
 
@@ -407,24 +418,35 @@ function toSheetRows(collection, items, personnel = []) {
   return [];
 }
 
+const pushQueues = new Map();
+
 export async function pushCollectionToGas(collection, items, personnel = []) {
   const gasUrl = getGasWebhookUrl();
   if (!gasUrl) return { synced: false };
-  try {
-    const rows = toSheetRows(collection, items, personnel);
-    const res = await fetch(gasUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sync', collection, rows }),
-      signal: AbortSignal.timeout(45000),
+
+  const prev = pushQueues.get(collection) || Promise.resolve();
+  const task = prev
+    .catch(() => {})
+    .then(async () => {
+      try {
+        const rows = toSheetRows(collection, items, personnel);
+        const res = await fetch(gasUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sync', collection, rows }),
+          signal: AbortSignal.timeout(45000),
+        });
+        if (!res.ok) return { synced: false, status: res.status };
+        const data = await res.json();
+        return { synced: !!data.success, count: data.count };
+      } catch (err) {
+        console.warn(`GAS sync failed for ${collection}:`, err.message);
+        return { synced: false, error: err.message };
+      }
     });
-    if (!res.ok) return { synced: false, status: res.status };
-    const data = await res.json();
-    return { synced: !!data.success, count: data.count };
-  } catch (err) {
-    console.warn(`GAS sync failed for ${collection}:`, err.message);
-    return { synced: false, error: err.message };
-  }
+
+  pushQueues.set(collection, task);
+  return task;
 }
 
 function findPersonnelIdByName(personnel, prefix, firstName, lastName, fullNameStr) {
@@ -596,6 +618,29 @@ function fromSheetOperations(rows, personnel = [], existingOps = []) {
     });
 }
 
+function parseSheetBool(val, fallback = false) {
+  if (val === undefined || val === null) return !!fallback;
+  const s = String(val).trim().toLowerCase();
+  if (!s) return !!fallback;
+  return s === 'true' || s === '1' || s === 'yes' || s === 'ใช่' || s === '✓' || s === '✔';
+}
+
+function parseSheetJsonArray(val, fallback = []) {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        // fall through
+      }
+    }
+  }
+  return Array.isArray(fallback) ? fallback : [];
+}
+
 function fromSheetCases(rows, existingCases = []) {
   if (!Array.isArray(rows)) return null;
   return rows
@@ -619,11 +664,14 @@ function fromSheetCases(rows, existingCases = []) {
       if (r['ไฟล์ที่เกี่ยวข้อง']) {
         relatedFiles = String(r['ไฟล์ที่เกี่ยวข้อง']).split(',').map((s) => s.trim()).filter(Boolean);
       }
+      const check1 = parseSheetBool(r['ขอแล้ว'], existing?.check1_requested);
+      const check2 = parseSheetBool(r['ได้รับแล้ว'], existing?.check2_received);
+      const check3 = parseSheetBool(r['ดูไฟล์แล้ว'], existing?.check3_verified);
       return {
         ...(existing || {}),
         id,
         caseName: caseName || existing?.caseName || '',
-        title: existing?.title || caseName || details,
+        title: (r['หัวข้องาน'] !== undefined ? String(r['หัวข้องาน']).trim() : '') || existing?.title || caseName || details,
         details: details || existing?.details || caseName,
         category: r['ประเภทคดี'] || existing?.category || 'งานสืบสวน',
         createdAt: r['วันที่รับมา'] || existing?.createdAt || '',
@@ -631,8 +679,22 @@ function fromSheetCases(rows, existingCases = []) {
         assignedToName: r['ผู้รับผิดชอบ'] || existing?.assignedToName || '',
         status,
         relatedFiles: relatedFiles.length > 0 ? relatedFiles : (existing?.relatedFiles || []),
-        relatedLinks: r['ลิงก์ที่เกี่ยวข้อง'] || existing?.relatedLinks || '',
+        relatedLinks: r['ลิงก์ที่เกี่ยวข้อง'] !== undefined
+          ? parseSheetJsonArray(r['ลิงก์ที่เกี่ยวข้อง'], existing?.relatedLinks || [])
+          : (existing?.relatedLinks || []),
         folderId: r['Folder ID'] || existing?.folderId || '',
+        docNumber: r['เลขหนังสือ'] !== undefined ? String(r['เลขหนังสือ']).trim() : (existing?.docNumber || ''),
+        targetAgency: r['ปลายทาง'] !== undefined ? String(r['ปลายทาง']).trim() : (existing?.targetAgency || ''),
+        channel: r['ช่องทาง'] !== undefined ? String(r['ช่องทาง']).trim() : (existing?.channel || ''),
+        result: r['ผล'] !== undefined ? String(r['ผล']).trim() : (existing?.result || ''),
+        check1_requested: check1,
+        check2_received: check2,
+        check3_verified: check3,
+        deadline: r['กำหนดส่ง'] !== undefined ? String(r['กำหนดส่ง']).trim() : (existing?.deadline || ''),
+        priority: (r['ความสำคัญ'] !== undefined ? String(r['ความสำคัญ']).trim() : '') || existing?.priority || 'normal',
+        coAssignees: r['ผู้ร่วมรับผิดชอบ'] !== undefined
+          ? parseSheetJsonArray(r['ผู้ร่วมรับผิดชอบ'], existing?.coAssignees || [])
+          : (existing?.coAssignees || []),
       };
     });
 }

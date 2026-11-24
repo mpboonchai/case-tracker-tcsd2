@@ -287,7 +287,7 @@ function writeObjectsToTab(ss, tabName, rows) {
   if (lastCol === 0) return;
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
-  // Ensure 'ชื่อเคส' column exists in 'งานในความรับผิดชอบ' so every task links to its case
+  // Ensure 'ชื่อเคส' and To-Do tracking columns exist in 'งานในความรับผิดชอบ'
   if (tabName === (TAB_MAP['cases'] || 'งานในความรับผิดชอบ')) {
     var hasCaseNameCol = headers.some(function(h) {
       return String(h || '').trim() === 'ชื่อเคส';
@@ -297,6 +297,30 @@ function writeObjectsToTab(ss, tabName, rows) {
       sheet.getRange(1, 2).setValue('ชื่อเคส');
       lastCol = sheet.getLastColumn();
       headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    }
+    var neededCaseCols = [
+      'เลขหนังสือ',
+      'ปลายทาง',
+      'ช่องทาง',
+      'ผล',
+      'ขอแล้ว',
+      'ได้รับแล้ว',
+      'ดูไฟล์แล้ว',
+      'กำหนดส่ง',
+      'ความสำคัญ',
+      'ผู้ร่วมรับผิดชอบ',
+      'หัวข้องาน'
+    ];
+    for (var cc = 0; cc < neededCaseCols.length; cc++) {
+      var colTitle = neededCaseCols[cc];
+      var existsCaseCol = headers.some(function(h) {
+        return String(h || '').trim() === colTitle;
+      });
+      if (!existsCaseCol) {
+        sheet.getRange(1, lastCol + 1).setValue(colTitle);
+        lastCol = sheet.getLastColumn();
+        headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+      }
     }
   }
 

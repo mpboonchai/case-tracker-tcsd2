@@ -320,6 +320,7 @@ app.post('/api/sync-from-sheet', async (_req, res) => {
   const result = await syncFromGoogleSheet();
   res.json({
     ...result,
+    cases: readJson(CASES_FILE, []),
     warrants: readJson(WARRANTS_FILE, []),
     operations: readJson(OPERATIONS_FILE, []),
   });
